@@ -1,0 +1,93 @@
+SOURCES += \
+    $$PWD/face68landmarks.cpp \
+    $$PWD/faceenhancer.cpp \
+    $$PWD/facerecognizer.cpp \
+    $$PWD/faceswap.cpp \
+    $$PWD/yolov8face.cpp \
+    $$PWD/utils.cpp \
+    $$PWD/qfacefusion_api.cpp
+
+HEADERS += \
+    $$PWD/face68landmarks.h \
+    $$PWD/faceenhancer.h \
+    $$PWD/facerecognizer.h \
+    $$PWD/faceswap.h \
+    $$PWD/yolov8face.h \
+    $$PWD/model_matrix.bin.h \
+    $$PWD/utils.h \
+    $$PWD/qfacefusion_api.h
+
+INCLUDEPATH += $$PWD
+
+DEFINES += USE_QT_WRAPPER
+DEFINES += MODEL_PATH=\\\"$$PWD/model\\\"
+
+win32:{
+    DEFINES += WINDOWS_FACEFUSION_BUILD
+    DEFINES += CUDA_FACEFUSION_BUILD
+        
+    OPENCV_DIR=C:/Users/quard_46bqlr2/Desktop/Faceswap/depend/opencv/build/install
+    ONNXRUNTIME_DIR=C:/Users/quard_46bqlr2/Desktop/Faceswap/depend/onnxruntime-win-x64-gpu-1.18.1
+    
+    INCLUDEPATH += -I $${OPENCV_DIR}/include/opencv4
+    DEPENDPATH += $${OPENCV_DIR}/include/opencv4
+    INCLUDEPATH += -I $${OPENCV_DIR}/include
+    DEPENDPATH += $${OPENCV_DIR}/include
+    LIBS += -L$${OPENCV_DIR}/x64/vc17/lib \
+        -lopencv_calib3d4100 \
+        -lopencv_core4100 \
+        -lopencv_dnn4100 \
+        -lopencv_features2d4100 \
+        -lopencv_flann4100 \
+        -lopencv_gapi4100 \
+        -lopencv_highgui4100 \
+        -lopencv_imgcodecs4100 \
+        -lopencv_imgproc4100 \
+        -lopencv_ml4100 \
+        -lopencv_objdetect4100 \
+        -lopencv_photo4100 \
+        -lopencv_stitching4100 \
+        -lopencv_video4100 \
+        -lopencv_videoio4100
+        
+    INCLUDEPATH += -I $${ONNXRUNTIME_DIR}/include
+    DEPENDPATH +=$${ONNXRUNTIME_DIR}/include
+    LIBS += -L$${ONNXRUNTIME_DIR}/lib/ -lonnxruntime
+}
+
+unix:!macx:{
+    DEFINES += LINUX_FACEFUSION_BUILD
+    #DEFINES += CUDA_FACEFUSION_BUILD
+
+    OPENCV_DIR=/usr
+    ONNXRUNTIME_DIR=/home/qqm/Videos/onnxruntime-1.18.2
+
+    INCLUDEPATH += -I $${OPENCV_DIR}/include/opencv4
+    DEPENDPATH += $${OPENCV_DIR}/include/opencv4
+    INCLUDEPATH += -I $${OPENCV_DIR}/include
+    DEPENDPATH += $${OPENCV_DIR}/include
+    LIBS += -L$${OPENCV_DIR}/lib/ -lopencv_stitching -lopencv_aruco -lopencv_bgsegm -lopencv_bioinspired -lopencv_ccalib -lopencv_dnn_objdetect -lopencv_dnn_superres -lopencv_dpm -lopencv_highgui -lopencv_face -lopencv_freetype -lopencv_fuzzy -lopencv_hdf -lopencv_hfs -lopencv_img_hash -lopencv_line_descriptor -lopencv_quality -lopencv_reg -lopencv_rgbd -lopencv_saliency -lopencv_shape -lopencv_stereo -lopencv_structured_light -lopencv_phase_unwrapping -lopencv_superres -lopencv_optflow -lopencv_surface_matching -lopencv_tracking -lopencv_datasets -lopencv_text -lopencv_dnn -lopencv_plot -lopencv_ml -lopencv_videostab -lopencv_videoio -lopencv_viz -lopencv_ximgproc -lopencv_video -lopencv_xobjdetect -lopencv_objdetect -lopencv_calib3d -lopencv_imgcodecs -lopencv_features2d -lopencv_flann -lopencv_xphoto -lopencv_photo -lopencv_imgproc -lopencv_core
+
+    INCLUDEPATH += -I $${ONNXRUNTIME_DIR}/include/onnxruntime/core/session
+    DEPENDPATH +=$${ONNXRUNTIME_DIR}/include/onnxruntime/core/session
+    LIBS += -L$${ONNXRUNTIME_DIR}/build/Linux/Debug/ -lonnxruntime
+
+}
+
+macx:{
+    DEFINES += MACOS_FACEFUSION_BUILD
+    DEFINES += COREML_FACEFUSION_BUILD
+
+    OPENCV_DIR=/usr/local
+    ONNXRUNTIME_DIR=/Volumes/Work/Faceswap/depend/onnxruntime-osx-arm64-1.19.2
+
+    INCLUDEPATH += -I $${OPENCV_DIR}/include/opencv4
+    DEPENDPATH += $${OPENCV_DIR}/include/opencv4
+    INCLUDEPATH += -I $${OPENCV_DIR}/include
+    DEPENDPATH += $${OPENCV_DIR}/include
+    LIBS += -L$${OPENCV_DIR}/lib/ -lopencv_stitching -lopencv_highgui -lopencv_video -lopencv_objdetect -lopencv_calib3d -lopencv_imgcodecs -lopencv_features2d -lopencv_flann -lopencv_photo -lopencv_imgproc -lopencv_core -lopencv_videoio
+
+    INCLUDEPATH += -I $${ONNXRUNTIME_DIR}/include
+    DEPENDPATH +=$${ONNXRUNTIME_DIR}/include
+    LIBS += -L$${ONNXRUNTIME_DIR}/lib/ -lonnxruntime
+}
