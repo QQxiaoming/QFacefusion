@@ -125,10 +125,12 @@ DEFINES += COREML_FACEFUSION_BUILD
 
 请参考[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)中提供的模型文件。
 
+```
 2dfan4.onnx            b6d33e0ab221bc9249d558cf0cbe44b0
 arcface_w600k_r50.onnx 80248d427976241cbd1343889ed132b3
 gfpgan_1.4.onnx        2f9d93ad985a8f45eb6dc32268a4576d
 inswapper_128.onnx     a3a155b90354160350efd66fed6b3d80
 yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
+```
 
 最后还是要感谢[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)和facefusion原项目，本项目只是做了些微不足道说明和封装，目的是方便小白使用。
