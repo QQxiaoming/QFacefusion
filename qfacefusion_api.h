@@ -122,7 +122,7 @@ public:
     struct msg_t {
         ImgType type;
         QImage img;
-        QString savefile;
+        QStringList args;
     };
     explicit QFaceFusionThread(const QString &model_path, QObject *parent = nullptr)
         : QThread(parent), modelPath(model_path) {
@@ -135,13 +135,13 @@ public:
     }
     void setSource(const QImage& img) {
         QMutexLocker locker(&mutex);
-        msg_t msg = { source, img, QString()};
+        msg_t msg = { source, img, QStringList()};
         msgList.enqueue(msg);
         condition.wakeOne();
     }
-    void setTarget(const QImage& img, const QString &savefile = QString()) {
+    void setTarget(const QImage& img, const QStringList &args = QStringList()) {
         QMutexLocker locker(&mutex);
-        msg_t msg = { target, img, savefile };
+        msg_t msg = { target, img, args };
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -152,7 +152,7 @@ public:
 
 signals:
     void swapProgress(uint64_t progress);
-    void swapFinished(bool ok, const QImage& target, const QImage& output);
+    void swapFinished(bool ok, const QImage& target, const QImage& output, const QStringList &args = QStringList());
 
 protected:
     void run() override {
@@ -182,10 +182,7 @@ protected:
                     emit swapProgress(2+progress*97/100);
                 });
                 emit swapProgress(100);
-                if(!msg.savefile.isEmpty()) {
-                    output.save(msg.savefile);
-                }
-                emit swapFinished(true, msg.img, output);
+                emit swapFinished(true, msg.img, output, msg.args);
             }
         }
     exit:
