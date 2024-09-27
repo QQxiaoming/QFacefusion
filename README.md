@@ -106,7 +106,7 @@ faceFusionThread->setTarget(frameImage[3]);
 - 本项目使用QMake，因此在.pro文件中添加如下配置：
 
 ```
-include(./qfacefusion/qfacefusion.pri)
+include(./QFacefusion/qfacefusion.pri)
 ```
 
 - pri文件中包含以下宏定义，请根据您的硬件平台选择合适的选项，注释不需要的选项
@@ -120,3 +120,15 @@ DEFINES += COREML_FACEFUSION_BUILD
 ```
 
     备注：不使用cuda或coreml加速则会使用cpu进行推理，耗时较大。
+
+## 模型文件
+
+请参考[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)中提供的模型文件。
+
+2dfan4.onnx            b6d33e0ab221bc9249d558cf0cbe44b0
+arcface_w600k_r50.onnx 80248d427976241cbd1343889ed132b3
+gfpgan_1.4.onnx        2f9d93ad985a8f45eb6dc32268a4576d
+inswapper_128.onnx     a3a155b90354160350efd66fed6b3d80
+yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
+
+最后还是要感谢[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)和facefusion原项目，本项目只是做了些微不足道说明和封装，目的是方便小白使用。
