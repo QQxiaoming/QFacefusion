@@ -15,9 +15,9 @@ class Face68Landmarks
 {
 public:
 	Face68Landmarks(std::string modelpath);
-	std::vector<cv::Point2f> detect(cv::Mat srcimg, const Bbox bounding_box, std::vector<cv::Point2f> &face_landmark_5of68);
+    std::vector<cv::Point2f> detect(cv::Mat srcimg, const FaceFusionUtils::Bbox bounding_box, std::vector<cv::Point2f> &face_landmark_5of68);
 private:
-	void preprocess(cv::Mat img, const Bbox bounding_box);
+    void preprocess(cv::Mat img, const FaceFusionUtils::Bbox bounding_box);
 	std::vector<float> input_image;
 	int input_height;
 	int input_width;

@@ -5,6 +5,8 @@
 #include <vector>
 #include "opencv2/opencv.hpp"
 
+namespace FaceFusionUtils {
+
 typedef struct
 {
     float xmin;
@@ -19,4 +21,7 @@ cv::Mat warp_face_by_face_landmark_5(const cv::Mat temp_vision_frame, cv::Mat &c
 cv::Mat create_static_box_mask(const int *crop_size, const float face_mask_blur, const int *face_mask_padding);
 cv::Mat paste_back(cv::Mat temp_vision_frame, cv::Mat crop_vision_frame, cv::Mat crop_mask, cv::Mat affine_matrix);
 cv::Mat blend_frame(cv::Mat temp_vision_frame, cv::Mat paste_vision_frame, const int FACE_ENHANCER_BLEND=80);
+
+}
+
 #endif

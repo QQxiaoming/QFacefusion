@@ -1,9 +1,8 @@
 #include "qfacefusion_api.h"
 
-
-
 using namespace cv;
 using namespace std;
+using namespace FaceFusionUtils;
 
 FaceFusion::FaceFusion(const std::string &model_path) 
 	: m_model_path(model_path) {

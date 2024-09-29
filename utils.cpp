@@ -3,6 +3,8 @@
 using namespace std;
 using namespace cv;
 
+namespace FaceFusionUtils {
+
 float GetIoU(const Bbox box1, const Bbox box2)
 {
     float x1 = max(box1.xmin, box2.xmin);
@@ -129,4 +131,6 @@ Mat blend_frame(Mat temp_vision_frame, Mat paste_vision_frame, const int FACE_EN
     Mat dstimg;
     cv::addWeighted(temp_vision_frame, face_enhancer_blend, paste_vision_frame, 1 - face_enhancer_blend, 0, dstimg);
     return dstimg;
+}
+
 }

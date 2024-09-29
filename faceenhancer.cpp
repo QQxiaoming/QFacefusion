@@ -3,6 +3,7 @@
 using namespace cv;
 using namespace std;
 using namespace Ort;
+using namespace FaceFusionUtils;
 
 FaceEnhance::FaceEnhance(string model_path)
 {

@@ -3,6 +3,7 @@
 using namespace cv;
 using namespace std;
 using namespace Ort;
+using namespace FaceFusionUtils;
 
 Face68Landmarks::Face68Landmarks(string model_path)
 {

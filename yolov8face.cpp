@@ -3,6 +3,7 @@
 using namespace cv;
 using namespace std;
 using namespace Ort;
+using namespace FaceFusionUtils;
 
 Yolov8Face::Yolov8Face(string model_path, const float conf_thres, const float iou_thresh)
 {

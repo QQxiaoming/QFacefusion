@@ -4,6 +4,7 @@
 using namespace cv;
 using namespace std;
 using namespace Ort;
+using namespace FaceFusionUtils;
 
 SwapFace::SwapFace(string model_path)
 {

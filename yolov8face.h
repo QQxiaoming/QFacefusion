@@ -15,7 +15,7 @@ class Yolov8Face
 {
 public:
 	Yolov8Face(std::string modelpath, const float conf_thres=0.5, const float iou_thresh=0.4);
-	void detect(cv::Mat srcimg, std::vector<Bbox> &boxes);   ////只返回检测框,置信度和5个关键点这两个信息在后续的模块里没有用到
+    void detect(cv::Mat srcimg, std::vector<FaceFusionUtils::Bbox> &boxes);   ////只返回检测框,置信度和5个关键点这两个信息在后续的模块里没有用到
 private:
 	void preprocess(cv::Mat img);
 	std::vector<float> input_image;
