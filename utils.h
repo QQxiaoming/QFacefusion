@@ -15,6 +15,13 @@ typedef struct
     float ymax;
 } Bbox;
 
+typedef struct
+{
+    float x;
+    float y;
+    float score;
+} KeyPoint;
+
 float GetIoU(const Bbox box1, const Bbox box2);
 std::vector<int> nms(std::vector<Bbox> boxes, std::vector<float> confidences, const float nms_thresh);
 cv::Mat warp_face_by_face_landmark_5(const cv::Mat temp_vision_frame, cv::Mat &crop_img, const std::vector<cv::Point2f> face_landmark_5, const std::vector<cv::Point2f> normed_template, const cv::Size crop_size);

@@ -107,6 +107,15 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
         const float score = pdata[4 * num_box + i];
         if (score > this->conf_threshold)
         {
+            //float cx        = pdata[0*num_box + i]
+            //float cy        = pdata[1*num_box + i]
+            //float w         = pdata[2*num_box + i]
+            //float h         = pdata[3*num_box + i]
+            //float score     = pdata[4*num_box + i]
+            //float kp1_x     = pdata[5*num_box + i]
+            //float kp1_y     = pdata[6*num_box + i]
+            //float kp1_score = pdata[7*num_box + i]
+            // ...
             float xmin = (pdata[i] - 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             float ymin = (pdata[num_box + i] - 0.5 * pdata[3 * num_box + i]) * this->ratio_height; ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             float xmax = (pdata[i] + 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
@@ -115,6 +124,14 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
             bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax});
             score_raw.emplace_back(score);
             /// 剩下的5个关键点坐标的计算,暂时不写,因为在下游的模块里没有用到5个关键点坐标信息
+            //vector<KeyPoint> kp5;
+            //for(int j=0;j<5;j++) {
+            //    float kpx = pdata[(5+3*j) * num_box + i] * this->ratio_width;
+            //    float kpy = pdata[(6+3*j) * num_box + i] * this->ratio_height;
+            //    float kps = pdata[(7+3*j) * num_box + i];
+            //    kp5.emplace_back(KeyPoint{kpx,kpy,kps});
+            //}
+            //kp5_raw.emplace_back(kp5);
         }
     }
     vector<int> keep_inds = nms(bounding_box_raw, score_raw, this->iou_threshold);
