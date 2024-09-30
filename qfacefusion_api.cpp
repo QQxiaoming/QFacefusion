@@ -100,6 +100,30 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img, std::fun
     return 0;
 }
 
+int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img) {
+	if(source_img.empty()){
+        return -1;
+    }
+	if (source_img.channels() != 3) {
+        return -1;
+    }
+	vector<Bbox> boxes;
+    std::vector<std::vector<FaceFusionUtils::KeyPoint>> kp5_raw;
+    m_detect_face_net->detect_with_kp5(source_img, boxes, kp5_raw);
+	cv::Mat temp_vision_frame = source_img.clone();
+	for (int i = 0; i < boxes.size(); i++){
+		cv::rectangle(temp_vision_frame, cv::Point(boxes[i].xmin, boxes[i].ymin), cv::Point(boxes[i].xmax, boxes[i].ymax), cv::Scalar(0, 255, 0), 2);
+		for (int j = 0; j < 5; j++){
+			cv::circle(temp_vision_frame, cv::Point(kp5_raw[j][i].x, kp5_raw[j][i].y), 2, cv::Scalar(0, 255, 0), 2);
+		}
+		cv::Point point = cv::Point(boxes[i].xmin, boxes[i].ymin);
+		if (point.y < 3) point.y += 3; else point.y -= 3;
+		cv::putText(temp_vision_frame, std::to_string(i), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+	}
+	output_img = temp_vision_frame;
+    return 0;
+}
+
 int FaceFusion::faceSwap(const string &source_path, const string &target_path, const string &output_path) {
 	Mat source_img = imread(source_path);
 	Mat target_img = imread(target_path);

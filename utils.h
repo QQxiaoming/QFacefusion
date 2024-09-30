@@ -19,7 +19,6 @@ typedef struct
 {
     float x;
     float y;
-    float score;
 } KeyPoint;
 
 float GetIoU(const Bbox box1, const Bbox box2);

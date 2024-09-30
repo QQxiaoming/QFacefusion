@@ -144,3 +144,65 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
         boxes[i] = bounding_box_raw[ind];
     }
 }
+
+void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<Bbox> &boxes, std::vector<std::vector<FaceFusionUtils::KeyPoint>> &kp5_raw)
+{
+    this->preprocess(srcimg);
+
+    std::vector<int64_t> input_img_shape = {1, 3, this->input_height, this->input_width};
+    Value input_tensor_ = Value::CreateTensor<float>(memory_info_handler, this->input_image.data(), this->input_image.size(), input_img_shape.data(), input_img_shape.size());
+
+    Ort::RunOptions runOptions;
+    vector<Value> ort_outputs = this->ort_session->Run(runOptions, this->input_names.data(), &input_tensor_, 1, this->output_names.data(), output_names.size());
+
+    float *pdata = ort_outputs[0].GetTensorMutableData<float>(); /// 形状是(1, 20, 8400),不考虑第0维batchsize，每一列的长度20,前4个元素是检测框坐标(cx,cy,w,h)，第4个元素是置信度，剩下的15个元素是5个关键点坐标x,y和置信度
+    const int num_box = ort_outputs[0].GetTensorTypeAndShapeInfo().GetShape()[2];
+    vector<Bbox> bounding_box_raw;
+    vector<float> score_raw;
+    vector<FaceFusionUtils::KeyPoint> kp[5];
+    vector<float> kpscore[5];
+    for (int i = 0; i < num_box; i++)
+    {
+        const float score = pdata[4 * num_box + i];
+        if (score > this->conf_threshold)
+        {
+            //float cx        = pdata[0*num_box + i]
+            //float cy        = pdata[1*num_box + i]
+            //float w         = pdata[2*num_box + i]
+            //float h         = pdata[3*num_box + i]
+            //float score     = pdata[4*num_box + i]
+            //float kp1_x     = pdata[5*num_box + i]
+            //float kp1_y     = pdata[6*num_box + i]
+            //float kp1_score = pdata[7*num_box + i]
+            // ...
+            float xmin = (pdata[i] - 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
+            float ymin = (pdata[num_box + i] - 0.5 * pdata[3 * num_box + i]) * this->ratio_height; ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
+            float xmax = (pdata[i] + 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
+            float ymax = (pdata[num_box + i] + 0.5 * pdata[3 * num_box + i]) * this->ratio_height; ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
+            ////坐标的越界检查保护，可以添加一下
+            bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax});
+            score_raw.emplace_back(score);
+            /// 剩下的5个关键点坐标的计算,暂时不写,因为在下游的模块里没有用到5个关键点坐标信息
+            for(int j=0;j<5;j++) {
+                float kpx = pdata[(5+3*j) * num_box + i] * this->ratio_width;
+                float kpy = pdata[(6+3*j) * num_box + i] * this->ratio_height;
+                float kps = pdata[(7+3*j) * num_box + i];
+                kp[j].emplace_back(FaceFusionUtils::KeyPoint{kpx,kpy});
+                kpscore[j].emplace_back(kps);
+            }
+        }
+    }
+    kp5_raw.resize(5);
+    vector<int> keep_inds = nms(bounding_box_raw, score_raw, this->iou_threshold);
+    const int keep_num = keep_inds.size();
+    boxes.clear();
+    boxes.resize(keep_num);
+    for (int i = 0; i < keep_num; i++)
+    {
+        const int ind = keep_inds[i];
+        boxes[i] = bounding_box_raw[ind];
+        for(int j=0;j<5;j++) {
+            kp5_raw[j].emplace_back(kp[j][ind]);
+        }
+    }
+}

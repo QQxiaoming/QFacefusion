@@ -16,6 +16,7 @@ public:
     int setSource(const cv::Mat &source_img);
     int runSwap(const cv::Mat &target_img, cv::Mat &output_img, std::function<void(uint64_t)> progress = nullptr);
     int runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img, std::function<void(uint64_t)> progress = nullptr);
+    int setDetect(const cv::Mat &source_img, cv::Mat &output_img);
 
     static int faceSwap(const std::string &source_path, const std::string &target_path, const std::string &output_path);
     static int faceSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img);
@@ -85,7 +86,13 @@ public:
         if(progress) progress(100);
         return ret;
     }
-
+    int setDetect(const QImage &source_img, QImage &output_img) {
+        cv::Mat source_mat = to_cvmat(source_img);
+        cv::Mat output_mat;
+        int ret = faswap->setDetect(source_mat, output_mat);
+        output_img = to_qimage(output_mat);
+        return ret;
+    }
     static cv::Mat to_cvmat(QImage img) {
         img = img.convertToFormat(QImage::Format_RGB888, Qt::ColorOnly).rgbSwapped();
         return cv::Mat(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine()).clone();
@@ -117,7 +124,8 @@ class QFaceFusionThread : public QThread {
 public:
     enum ImgType {
         source,
-        target
+        target,
+        detect
     };
     struct msg_t {
         ImgType type;
@@ -142,6 +150,12 @@ public:
     void setTarget(const QImage& img, const QStringList &args = QStringList()) {
         QMutexLocker locker(&mutex);
         msg_t msg = { target, img, args };
+        msgList.enqueue(msg);
+        condition.wakeOne();
+    }
+    void setDetect(const QImage& img, const QStringList &args = QStringList()) {
+        QMutexLocker locker(&mutex);
+        msg_t msg = { detect, img, args };
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -182,6 +196,10 @@ protected:
                     emit swapProgress(2+progress*97/100);
                 });
                 emit swapProgress(100);
+                emit swapFinished(true, msg.img, output, msg.args);
+            } else if (msg.type == detect) {
+                QImage output;
+                faswap->setDetect(msg.img, output);
                 emit swapFinished(true, msg.img, output, msg.args);
             }
         }
