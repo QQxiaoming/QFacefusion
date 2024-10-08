@@ -187,20 +187,27 @@ protected:
             msg_t msg = msgList.dequeue();
             mutex.unlock();
             if (msg.type == source) {
-                emit swapProgress(1);
-                faswap->setSource(msg.img);
+                int ret = faswap->setSource(msg.img);
             } else if (msg.type == target) {
                 QImage output;
                 emit swapProgress(2);
-                faswap->runSwap(msg.img, output, [this](uint64_t progress) {
+                int ret = faswap->runSwap(msg.img, output, [this](uint64_t progress) {
                     emit swapProgress(2+progress*97/100);
                 });
                 emit swapProgress(100);
-                emit swapFinished(true, msg.img, output, msg.args);
+                if(ret < 0) {
+                    emit swapFinished(false, msg.img, msg.img, msg.args);
+                } else {
+                    emit swapFinished(true, msg.img, output, msg.args);
+                }
             } else if (msg.type == detect) {
                 QImage output;
-                faswap->setDetect(msg.img, output);
-                emit swapFinished(true, msg.img, output, msg.args);
+                int ret = faswap->setDetect(msg.img, output);
+                if(ret < 0) {
+                    emit swapFinished(false, msg.img, msg.img, msg.args);
+                } else {
+                    emit swapFinished(false, msg.img, output, msg.args);
+                }
             }
         }
     exit:

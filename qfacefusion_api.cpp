@@ -31,6 +31,9 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
 	vector<Bbox> boxes;
     if(progress) progress(1);
     m_detect_face_net->detect(source_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
     if(progress) progress(10);
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> face_landmark_5of68;
@@ -41,6 +44,9 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
 
     if(progress) progress(40);
     m_detect_face_net->detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> target_landmark_5;
     if(progress) progress(50);
@@ -64,6 +70,9 @@ int FaceFusion::setSource(const cv::Mat &source_img) {
     }
 	vector<Bbox> boxes;
     m_detect_face_net->detect(source_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> face_landmark_5of68;
     m_detect_68landmarks_net->detect(source_img, boxes[position], face_landmark_5of68);
@@ -86,6 +95,9 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img, std::fun
     if(progress) progress(1);
 	vector<Bbox> boxes;
     m_detect_face_net->detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
     if(progress) progress(30);
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> target_landmark_5;
@@ -144,12 +156,18 @@ int FaceFusion::faceSwap(const string &source_path, const string &target_path, c
 
     vector<Bbox> boxes;
 	detect_face_net.detect(source_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> face_landmark_5of68;
 	vector<Point2f> face68landmarks = detect_68landmarks_net.detect(source_img, boxes[position], face_landmark_5of68);
 	vector<float> source_face_embedding = face_embedding_net.detect(source_img, face_landmark_5of68);
 
 	detect_face_net.detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> target_landmark_5;
 	detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
@@ -179,12 +197,18 @@ int FaceFusion::faceSwap(const Mat &source_img, const Mat &target_img, Mat &outp
 
     vector<Bbox> boxes;
 	detect_face_net.detect(source_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> face_landmark_5of68;
 	vector<Point2f> face68landmarks = detect_68landmarks_net.detect(source_img, boxes[position], face_landmark_5of68);
 	vector<float> source_face_embedding = face_embedding_net.detect(source_img, face_landmark_5of68);
 
 	detect_face_net.detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
 	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> target_landmark_5;
 	detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
