@@ -165,12 +165,15 @@ public:
     }
 
 signals:
+    void loadModelState(uint32_t state);
     void swapProgress(uint64_t progress);
     void swapFinished(bool ok, const QImage& target, const QImage& output, const QStringList &args = QStringList());
 
 protected:
     void run() override {
+        emit loadModelState(0);
         faswap = new QFaceFusion(modelPath);
+        emit loadModelState(1);
         while (!exit) {
             mutex.lock();
             while(msgList.isEmpty()) {
