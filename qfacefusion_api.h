@@ -206,7 +206,7 @@ protected:
                 if(ret < 0) {
                     emit swapFinished(false, msg.img, msg.img, msg.args);
                 } else {
-                    emit swapFinished(false, msg.img, output, msg.args);
+                    emit swapFinished(true, msg.img, output, msg.args);
                 }
             }
         }
