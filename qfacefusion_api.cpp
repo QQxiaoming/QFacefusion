@@ -21,7 +21,8 @@ FaceFusion::~FaceFusion() {
 	delete m_enhance_face_net;
 }
 
-int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img, std::function<void(uint64_t)> progress) {
+int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img,
+			bool multipleFace, std::function<void(uint64_t)> progress) {
 	if(source_img.empty() || target_img.empty()){
         return -1;
     }
@@ -47,16 +48,33 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
 	if(boxes.empty()) {
 		return -1;
 	}
-	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
-	vector<Point2f> target_landmark_5;
-    if(progress) progress(50);
-    m_detect_68landmarks_net->detect(target_img, boxes[position], target_landmark_5);
+	if(multipleFace) {
+    	if(progress) progress(50);
+		output_img = target_img;
+        for (size_t i = 0; i < boxes.size(); i++) {
+			if(progress) progress(50+i*50/boxes.size());
+			vector<Point2f> target_landmark_5;
+            m_detect_68landmarks_net->detect(output_img, boxes[i], target_landmark_5);
 
-    if(progress) progress(70);
-    Mat swapimg = m_swap_face_net->process(target_img, source_face_embedding, target_landmark_5);
-    if(progress) progress(80);
-    output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
-    if(progress) progress(100);
+			if(progress) progress(50+i*50/boxes.size()+10/boxes.size());
+			Mat swapimg = m_swap_face_net->process(output_img, source_face_embedding, target_landmark_5);
+			if(progress) progress(50+i*50/boxes.size()+40/boxes.size());
+			output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
+			if(progress) progress(50+i*50/boxes.size()+50/boxes.size());
+		}
+		if(progress) progress(100);
+	} else {
+    	if(progress) progress(50);
+		int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
+		vector<Point2f> target_landmark_5;
+		m_detect_68landmarks_net->detect(target_img, boxes[position], target_landmark_5);
+
+		if(progress) progress(60);
+		Mat swapimg = m_swap_face_net->process(target_img, source_face_embedding, target_landmark_5);
+		if(progress) progress(80);
+		output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
+		if(progress) progress(100);
+	}
 	
     return 0;
 }
@@ -81,7 +99,8 @@ int FaceFusion::setSource(const cv::Mat &source_img) {
     return 0;
 }
 
-int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img, std::function<void(uint64_t)> progress) {
+int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
+			bool multipleFace, std::function<void(uint64_t)> progress) {
 	if(!m_source) {
 		return -1;
 	}
@@ -98,18 +117,35 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img, std::fun
 	if(boxes.empty()) {
 		return -1;
 	}
-    if(progress) progress(30);
-	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
-	vector<Point2f> target_landmark_5;
-    m_detect_68landmarks_net->detect(target_img, boxes[position], target_landmark_5);
+	if(multipleFace) {
+    	if(progress) progress(30);
+		output_img = target_img;
+        for (size_t i = 0; i < boxes.size(); i++) {
+			if(progress) progress(30+i*70/boxes.size());
+			vector<Point2f> target_landmark_5;
+            m_detect_68landmarks_net->detect(output_img, boxes[i], target_landmark_5);
 
-    if(progress) progress(50);
-    Mat swapimg = m_swap_face_net->process(target_img, m_source_face_embedding, target_landmark_5);
-    if(progress) progress(80);
-    output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
-    if(progress) progress(100);
+			if(progress) progress(30+i*70/boxes.size()+20/boxes.size());
+			Mat swapimg = m_swap_face_net->process(output_img, m_source_face_embedding, target_landmark_5);
+			if(progress) progress(30+i*70/boxes.size()+50/boxes.size());
+			output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
+			if(progress) progress(30+i*70/boxes.size()+70/boxes.size());
+		}
+		if(progress) progress(100);
+	} else {
+    	if(progress) progress(30);
+		int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
+		vector<Point2f> target_landmark_5;
+		m_detect_68landmarks_net->detect(target_img, boxes[position], target_landmark_5);
+
+		if(progress) progress(50);
+		Mat swapimg = m_swap_face_net->process(target_img, m_source_face_embedding, target_landmark_5);
+		if(progress) progress(80);
+		output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
+		if(progress) progress(100);
+	}
 	
-    return 0;
+	return 0;
 }
 
 int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img) {
@@ -136,7 +172,7 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img) {
     return 0;
 }
 
-int FaceFusion::faceSwap(const string &source_path, const string &target_path, const string &output_path) {
+int FaceFusion::faceSwap(const string &source_path, const string &target_path, const string &output_path, bool multipleFace) {
 	Mat source_img = imread(source_path);
 	Mat target_img = imread(target_path);
 	if(source_img.empty() || target_img.empty()){
@@ -168,19 +204,30 @@ int FaceFusion::faceSwap(const string &source_path, const string &target_path, c
 	if(boxes.empty()) {
 		return -1;
 	}
-	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
-	vector<Point2f> target_landmark_5;
-	detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
+	Mat resultimg = target_img;
+	if(multipleFace) {
+        for (size_t i = 0; i < boxes.size(); i++) {
+			vector<Point2f> target_landmark_5;
+            detect_68landmarks_net.detect(resultimg, boxes[i], target_landmark_5);
 
-	Mat swapimg = swap_face_net.process(target_img, source_face_embedding, target_landmark_5);
-	Mat resultimg = enhance_face_net.process(swapimg, target_landmark_5);
+			Mat swapimg = swap_face_net.process(resultimg, source_face_embedding, target_landmark_5);
+			resultimg = enhance_face_net.process(swapimg, target_landmark_5);
+		}
+	} else {
+		position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
+		vector<Point2f> target_landmark_5;
+		detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
+
+		Mat swapimg = swap_face_net.process(target_img, source_face_embedding, target_landmark_5);
+		resultimg = enhance_face_net.process(swapimg, target_landmark_5);
+	}
 	
 	imwrite(output_path, resultimg);
 
     return 0;
 }
 
-int FaceFusion::faceSwap(const Mat &source_img, const Mat &target_img, Mat &output_img) {
+int FaceFusion::faceSwap(const Mat &source_img, const Mat &target_img, Mat &output_img, bool multipleFace) {
 	if(source_img.empty() || target_img.empty()){
         return -1;
     }
@@ -209,12 +256,23 @@ int FaceFusion::faceSwap(const Mat &source_img, const Mat &target_img, Mat &outp
 	if(boxes.empty()) {
 		return -1;
 	}
-	position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
-	vector<Point2f> target_landmark_5;
-	detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
+	if(multipleFace) {
+		output_img = target_img;
+        for (size_t i = 0; i < boxes.size(); i++) {
+			vector<Point2f> target_landmark_5;
+            detect_68landmarks_net.detect(output_img, boxes[i], target_landmark_5);
 
-	Mat swapimg = swap_face_net.process(target_img, source_face_embedding, target_landmark_5);
-	output_img = enhance_face_net.process(swapimg, target_landmark_5);
+			Mat swapimg = swap_face_net.process(output_img, source_face_embedding, target_landmark_5);
+			output_img = enhance_face_net.process(swapimg, target_landmark_5);
+		}
+	} else {
+		position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
+		vector<Point2f> target_landmark_5;
+		detect_68landmarks_net.detect(target_img, boxes[position], target_landmark_5);
+
+		Mat swapimg = swap_face_net.process(target_img, source_face_embedding, target_landmark_5);
+		output_img = enhance_face_net.process(swapimg, target_landmark_5);
+	}
 	
     return 0;
 }
