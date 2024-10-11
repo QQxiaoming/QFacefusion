@@ -145,7 +145,7 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
     }
 }
 
-void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<Bbox> &boxes, std::vector<std::vector<FaceFusionUtils::KeyPoint>> &kp5_raw)
+void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<BboxWithKP5> &boxes)
 {
     this->preprocess(srcimg);
 
@@ -192,7 +192,6 @@ void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<Bbox> &boxes, std::vect
             }
         }
     }
-    kp5_raw.resize(5);
     vector<int> keep_inds = nms(bounding_box_raw, score_raw, this->iou_threshold);
     const int keep_num = keep_inds.size();
     boxes.clear();
@@ -200,9 +199,12 @@ void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<Bbox> &boxes, std::vect
     for (int i = 0; i < keep_num; i++)
     {
         const int ind = keep_inds[i];
-        boxes[i] = bounding_box_raw[ind];
+        boxes[i].xmin = bounding_box_raw[ind].xmin;
+        boxes[i].ymin = bounding_box_raw[ind].ymin;
+        boxes[i].xmax = bounding_box_raw[ind].xmax;
+        boxes[i].ymax = bounding_box_raw[ind].ymax;
         for(int j=0;j<5;j++) {
-            kp5_raw[j].emplace_back(kp[j][ind]);
+            boxes[i].kp5[j] = kp[j][ind];
         }
     }
 }

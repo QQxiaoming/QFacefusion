@@ -14,12 +14,31 @@ public:
     FaceFusion(const std::string &model_path);
     ~FaceFusion();
     int setSource(const cv::Mat &source_img);
-    int runSwap(const cv::Mat &target_img, cv::Mat &output_img, uint32_t id = 0, bool multipleFace = false, std::function<void(uint64_t)> progress = nullptr);
-    int runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img, uint32_t id = 0, bool multipleFace = false, std::function<void(uint64_t)> progress = nullptr);
-    int setDetect(const cv::Mat &source_img, cv::Mat &output_img);
+    int runSwap(const cv::Mat &target_img, 
+                cv::Mat &output_img, 
+                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                std::function<void(uint64_t)> progress = nullptr);
+    int runSwap(const cv::Mat &source_img, 
+                const cv::Mat &target_img, 
+                cv::Mat &output_img, 
+                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                std::function<void(uint64_t)> progress = nullptr);
+    int setDetect(const cv::Mat &source_img, cv::Mat &output_img, 
+                uint32_t order = 0);
 
-    static int faceSwap(const std::string &source_path, const std::string &target_path, const std::string &output_path, uint32_t id = 0, bool multipleFace = false);
-    static int faceSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img, uint32_t id = 0, bool multipleFace = false);
+    static int faceSwap(const std::string &source_path, 
+                        const std::string &target_path, 
+                        const std::string &output_path, 
+                        uint32_t id = 0, uint32_t order = 0, 
+                        bool multipleFace = false);
+    static int faceSwap(const cv::Mat &source_img, 
+                        const cv::Mat &target_img, 
+                        cv::Mat &output_img, 
+                        uint32_t id = 0, uint32_t order = 0, 
+                        bool multipleFace = false);
+
+private:
+    template<typename T> static void sortBoxes(std::vector<T> &boxes, uint32_t order);
 
 private:
     std::string m_model_path;
@@ -58,12 +77,14 @@ public:
         cv::Mat source_mat = to_cvmat(source_img);
         return faswap->setSource(source_mat);
     }
-    int runSwap(const QImage &target_img, QImage &output_img, uint32_t id = 0, bool multipleFace = false, std::function<void(uint64_t)> progress = nullptr) {
+    int runSwap(const QImage &target_img, QImage &output_img, 
+                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                std::function<void(uint64_t)> progress = nullptr) {
         if(progress) progress(1);
         cv::Mat target_mat = to_cvmat(target_img);
         if(progress) progress(2);
         cv::Mat output_mat;
-        int ret = faswap->runSwap(target_mat, output_mat, id, multipleFace, [progress](uint64_t vale) {
+        int ret = faswap->runSwap(target_mat, output_mat, id, order, multipleFace, [progress](uint64_t vale) {
             if(progress) progress(2+vale*96/100);
         });
         if(progress) progress(99);
@@ -71,14 +92,16 @@ public:
         if(progress) progress(100);
         return ret;
     }
-    int runSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, uint32_t id = 0, bool multipleFace = false, std::function<void(uint64_t)> progress = nullptr) {
+    int runSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, 
+                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                std::function<void(uint64_t)> progress = nullptr) {
         if(progress) progress(1);
         cv::Mat source_mat = to_cvmat(source_img);
         if(progress) progress(2);
         cv::Mat target_mat = to_cvmat(target_img);
         if(progress) progress(3);
         cv::Mat output_mat;
-        int ret = faswap->runSwap(source_mat, target_mat, output_mat, id, multipleFace, [progress](uint64_t vale) {
+        int ret = faswap->runSwap(source_mat, target_mat, output_mat, id, order, multipleFace, [progress](uint64_t vale) {
             if(progress) progress(3+vale*95/100);
         });
         if(progress) progress(99);
@@ -86,10 +109,10 @@ public:
         if(progress) progress(100);
         return ret;
     }
-    int setDetect(const QImage &source_img, QImage &output_img) {
+    int setDetect(const QImage &source_img, QImage &output_img, uint32_t order = 0) {
         cv::Mat source_mat = to_cvmat(source_img);
         cv::Mat output_mat;
-        int ret = faswap->setDetect(source_mat, output_mat);
+        int ret = faswap->setDetect(source_mat, output_mat, order);
         output_img = to_qimage(output_mat);
         return ret;
     }
@@ -103,14 +126,20 @@ public:
     };
 
 public:
-    static int faceSwap(const QString &source_path, const QString &target_path, const QString &output_path, uint32_t id = 0, bool multipleFace = false) {
-        return FaceFusion::faceSwap(source_path.toStdString(), target_path.toStdString(), output_path.toStdString(), id, multipleFace);
+    static int faceSwap(const QString &source_path, const QString &target_path, const QString &output_path, 
+            uint32_t id = 0, uint32_t order = 0, bool multipleFace = false) {
+        return FaceFusion::faceSwap(source_path.toStdString(), 
+                                    target_path.toStdString(), 
+                                    output_path.toStdString(), 
+                                    id, order, multipleFace);
     }
-    static int faceSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, uint32_t id = 0, bool multipleFace = false) {
+    static int faceSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, 
+            uint32_t id = 0, uint32_t order = 0, bool multipleFace = false) {
         cv::Mat source_mat = to_cvmat(source_img);
         cv::Mat target_mat = to_cvmat(target_img);
         cv::Mat output_mat;
-        int ret = FaceFusion::faceSwap(source_mat, target_mat, output_mat, id, multipleFace);
+        int ret = FaceFusion::faceSwap(source_mat, target_mat, output_mat, 
+                                    id, order, multipleFace);
         output_img = to_qimage(output_mat);
         return ret;
     }
@@ -169,6 +198,9 @@ public:
     void setTargetFaceId(uint32_t id) {
         m_targetFaceId = id;
     }
+    void setTargetFaceOrder(uint32_t order) {
+        m_targetFaceOrder = order;
+    }
 
 signals:
     void loadModelState(uint32_t state);
@@ -196,11 +228,13 @@ protected:
             msg_t msg = msgList.dequeue();
             mutex.unlock();
             if (msg.type == source) {
-                int ret = faswap->setSource(msg.img);
+                faswap->setSource(msg.img);
             } else if (msg.type == target) {
                 QImage output;
                 emit swapProgress(2);
-                int ret = faswap->runSwap(msg.img, output, m_targetFaceId, m_multipleFace, [this](uint64_t progress) {
+                int ret = faswap->runSwap(msg.img, output, 
+                    m_targetFaceId, m_targetFaceOrder, m_multipleFace, 
+                    [this](uint64_t progress) {
                     emit swapProgress(2+progress*97/100);
                 });
                 emit swapProgress(100);
@@ -211,7 +245,7 @@ protected:
                 }
             } else if (msg.type == detect) {
                 QImage output;
-                int ret = faswap->setDetect(msg.img, output);
+                int ret = faswap->setDetect(msg.img, output, m_targetFaceOrder);
                 if(ret < 0) {
                     emit swapFinished(false, msg.img, msg.img, msg.args);
                 } else {
@@ -232,6 +266,7 @@ private:
     QWaitCondition condition;
     bool m_multipleFace = true;
     uint32_t m_targetFaceId = 0;
+    uint32_t m_targetFaceOrder = 0;
 };
 
 #endif
