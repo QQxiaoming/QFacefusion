@@ -13,7 +13,8 @@ class FaceFusion {
 public:
     FaceFusion(const std::string &model_path);
     ~FaceFusion();
-    int setSource(const cv::Mat &source_img);
+    int setSource(const cv::Mat &source_img, uint32_t id = 0);
+    void clearSource(void);
     int runSwap(const cv::Mat &target_img, 
                 cv::Mat &output_img, 
                 uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
@@ -49,7 +50,7 @@ private:
 	FaceEnhance *m_enhance_face_net = nullptr;
 
     bool m_source = false;
-    std::vector<float> m_source_face_embedding;
+    std::vector<std::vector<float>> m_source_face_embedding_arr;
 };
 
 #ifdef USE_QT_WRAPPER
@@ -73,9 +74,12 @@ public:
             faswap = nullptr;
         }
     }
-    int setSource(const QImage &source_img) {
+    int setSource(const QImage &source_img, uint32_t id = 0) {
         cv::Mat source_mat = to_cvmat(source_img);
-        return faswap->setSource(source_mat);
+        return faswap->setSource(source_mat, id);
+    }
+    void clearSource(void) {
+        faswap->clearSource();
     }
     int runSwap(const QImage &target_img, QImage &output_img, 
                 uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
@@ -170,9 +174,19 @@ public:
         condition.wakeOne();
         wait();
     }
-    void setSource(const QImage& img) {
+    void setSource(const QImage& img, uint32_t id = 0) {
+        QStringList args;
+        args.append(QString::number(id));
         QMutexLocker locker(&mutex);
-        msg_t msg = { source, img, QStringList()};
+        msg_t msg = { source, img, args};
+        msgList.enqueue(msg);
+        condition.wakeOne();
+    }
+    void clearSource(void) {
+        QStringList args;
+        args.append(QString::number(-1));
+        QMutexLocker locker(&mutex);
+        msg_t msg = { source, QImage(), args};
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -228,7 +242,12 @@ protected:
             msg_t msg = msgList.dequeue();
             mutex.unlock();
             if (msg.type == source) {
-                faswap->setSource(msg.img);
+                int32_t id = msg.args.isEmpty() ? 0 : msg.args[0].toInt();
+                if(id < 0) {
+                    faswap->clearSource();
+                } else {
+                    faswap->setSource(msg.img,id);
+                }
             } else if (msg.type == target) {
                 QImage output;
                 emit swapProgress(2);

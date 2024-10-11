@@ -106,7 +106,14 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
     return 0;
 }
 
-int FaceFusion::setSource(const cv::Mat &source_img) {
+void FaceFusion::clearSource(void) {
+	m_source_face_embedding_arr.clear();
+}
+
+int FaceFusion::setSource(const cv::Mat &source_img, uint32_t id) {
+	if(m_source_face_embedding_arr.size() < id) {
+        return -1;
+	}
 	if(source_img.empty()){
         return -1;
     }
@@ -121,14 +128,18 @@ int FaceFusion::setSource(const cv::Mat &source_img) {
 	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
 	vector<Point2f> face_landmark_5of68;
     m_detect_68landmarks_net->detect(source_img, boxes[position], face_landmark_5of68);
-    m_source_face_embedding = m_face_embedding_net->detect(source_img, face_landmark_5of68);
-	m_source = true;
+    vector<float> source_face_embedding = m_face_embedding_net->detect(source_img, face_landmark_5of68);
+	if(m_source_face_embedding_arr.size() == id) {
+		m_source_face_embedding_arr.push_back(source_face_embedding);
+	} else {
+		m_source_face_embedding_arr[id] = source_face_embedding;
+	}
     return 0;
 }
 
 int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 			uint32_t id, uint32_t order, bool multipleFace, std::function<void(uint64_t)> progress) {
-	if(!m_source) {
+	if(m_source_face_embedding_arr.empty()){
 		return -1;
 	}
     if(target_img.empty()){
@@ -154,7 +165,8 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
             m_detect_68landmarks_net->detect(output_img, boxes[i], target_landmark_5);
 
 			if(progress) progress(30+i*70/boxes.size()+20/boxes.size());
-			Mat swapimg = m_swap_face_net->process(output_img, m_source_face_embedding, target_landmark_5);
+			uint32_t source_id = i % m_source_face_embedding_arr.size();
+            Mat swapimg = m_swap_face_net->process(output_img, m_source_face_embedding_arr[source_id], target_landmark_5);
 			if(progress) progress(30+i*70/boxes.size()+50/boxes.size());
 			output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
 			if(progress) progress(30+i*70/boxes.size()+70/boxes.size());
@@ -168,7 +180,7 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 		m_detect_68landmarks_net->detect(target_img, boxes[position], target_landmark_5);
 
 		if(progress) progress(50);
-		Mat swapimg = m_swap_face_net->process(target_img, m_source_face_embedding, target_landmark_5);
+        Mat swapimg = m_swap_face_net->process(target_img, m_source_face_embedding_arr[0], target_landmark_5);
 		if(progress) progress(80);
 		output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
 		if(progress) progress(100);
