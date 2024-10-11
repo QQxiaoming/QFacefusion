@@ -17,12 +17,12 @@ public:
     void clearSource(void);
     int runSwap(const cv::Mat &target_img, 
                 cv::Mat &output_img, 
-                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, 
                 std::function<void(uint64_t)> progress = nullptr);
     int runSwap(const cv::Mat &source_img, 
                 const cv::Mat &target_img, 
                 cv::Mat &output_img, 
-                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, 
                 std::function<void(uint64_t)> progress = nullptr);
     int setDetect(const cv::Mat &source_img, cv::Mat &output_img, 
                 uint32_t order = 0);
@@ -31,12 +31,12 @@ public:
                         const std::string &target_path, 
                         const std::string &output_path, 
                         uint32_t id = 0, uint32_t order = 0, 
-                        bool multipleFace = false);
+                        int multipleFace = 0);
     static int faceSwap(const cv::Mat &source_img, 
                         const cv::Mat &target_img, 
                         cv::Mat &output_img, 
                         uint32_t id = 0, uint32_t order = 0, 
-                        bool multipleFace = false);
+                        int multipleFace = 0);
 
 private:
     template<typename T> static void sortBoxes(std::vector<T> &boxes, uint32_t order);
@@ -82,7 +82,7 @@ public:
         faswap->clearSource();
     }
     int runSwap(const QImage &target_img, QImage &output_img, 
-                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, 
                 std::function<void(uint64_t)> progress = nullptr) {
         if(progress) progress(1);
         cv::Mat target_mat = to_cvmat(target_img);
@@ -97,7 +97,7 @@ public:
         return ret;
     }
     int runSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, 
-                uint32_t id = 0, uint32_t order = 0, bool multipleFace = false, 
+                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, 
                 std::function<void(uint64_t)> progress = nullptr) {
         if(progress) progress(1);
         cv::Mat source_mat = to_cvmat(source_img);
@@ -131,14 +131,14 @@ public:
 
 public:
     static int faceSwap(const QString &source_path, const QString &target_path, const QString &output_path, 
-            uint32_t id = 0, uint32_t order = 0, bool multipleFace = false) {
+            uint32_t id = 0, uint32_t order = 0, int multipleFace = 0) {
         return FaceFusion::faceSwap(source_path.toStdString(), 
                                     target_path.toStdString(), 
                                     output_path.toStdString(), 
                                     id, order, multipleFace);
     }
     static int faceSwap(const QImage &source_img, const QImage &target_img, QImage &output_img, 
-            uint32_t id = 0, uint32_t order = 0, bool multipleFace = false) {
+            uint32_t id = 0, uint32_t order = 0, int multipleFace = 0) {
         cv::Mat source_mat = to_cvmat(source_img);
         cv::Mat target_mat = to_cvmat(target_img);
         cv::Mat output_mat;
@@ -206,7 +206,7 @@ public:
         QMutexLocker locker(&mutex);
         return !msgList.isEmpty();
     }
-    void setMultipleFace(bool multipleFace) {
+    void setMultipleFaceMode(int multipleFace) {
         m_multipleFace = multipleFace;
     }
     void setTargetFaceId(uint32_t id) {
@@ -283,7 +283,7 @@ private:
     QMutex mutex;
     QQueue<msg_t> msgList;
     QWaitCondition condition;
-    bool m_multipleFace = true;
+    int m_multipleFace = 0;
     uint32_t m_targetFaceId = 0;
     uint32_t m_targetFaceOrder = 0;
 };
