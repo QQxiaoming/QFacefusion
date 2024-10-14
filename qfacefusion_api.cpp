@@ -364,7 +364,6 @@ int FaceFusion::faceSwap(const string &source_path,
 	Face68Landmarks detect_68landmarks_net(root_mod_path+"/2dfan4.onnx");
 	FaceEmbdding face_embedding_net(root_mod_path+"/arcface_w600k_r50.onnx");
 	SwapFace swap_face_net(root_mod_path+"/inswapper_128.onnx");
-	FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 	FaceEnhance enhance_face_net(root_mod_path+"/gfpgan_1.4.onnx");
 
     vector<Bbox> boxes;
@@ -382,6 +381,7 @@ int FaceFusion::faceSwap(const string &source_path,
 		return -1;
 	}
 	if(genderMask != 0) {
+		FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 		vector<Bbox> boxes_tmp;
 		for(auto &box : boxes) {
 			vector<Point2f> face_landmark_5of68;
@@ -442,7 +442,6 @@ int FaceFusion::faceSwap(const Mat &source_img,
 	Face68Landmarks detect_68landmarks_net(root_mod_path+"/2dfan4.onnx");
 	FaceEmbdding face_embedding_net(root_mod_path+"/arcface_w600k_r50.onnx");
 	SwapFace swap_face_net(root_mod_path+"/inswapper_128.onnx");
-	FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 	FaceEnhance enhance_face_net(root_mod_path+"/gfpgan_1.4.onnx");
 
     vector<Bbox> boxes;
@@ -461,6 +460,7 @@ int FaceFusion::faceSwap(const Mat &source_img,
 	}
 	if(genderMask != 0) {
 		vector<Bbox> boxes_tmp;
+		FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 		for(auto &box : boxes) {
 			vector<Point2f> face_landmark_5of68;
 			detect_68landmarks_net.detect(target_img, box, face_landmark_5of68);
