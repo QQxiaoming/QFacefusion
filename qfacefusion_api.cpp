@@ -57,7 +57,7 @@ FaceClassifier::FaceGender FaceFusion::checkGender(const cv::Mat &source_img, co
 }
 
 int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img,
-			uint32_t id, uint32_t order, int multipleFace, std::function<void(uint64_t)> progress) {
+			uint32_t id, uint32_t order, int multipleFace, int genderMask, std::function<void(uint64_t)> progress) {
 	if(source_img.empty() || target_img.empty()){
         return -1;
     }
@@ -83,13 +83,13 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
 	if(boxes.empty()) {
 		return -1;
 	}
-	if(m_targetMask != 0) {
+	if(genderMask != 0) {
 		vector<Bbox> boxes_tmp;
 		for(auto &box : boxes) {
 			FaceClassifier::FaceGender gender = checkGender(target_img, box);
-			if((m_targetMask == 1) && gender == FaceClassifier::FEMALE) {
+			if((genderMask == 1) && gender == FaceClassifier::FEMALE) {
 				boxes_tmp.push_back(box);
-			} else if((m_targetMask == 2) && gender == FaceClassifier::MALE) {
+			} else if((genderMask == 2) && gender == FaceClassifier::MALE) {
 				boxes_tmp.push_back(box);
 			}
 		}
@@ -165,7 +165,7 @@ int FaceFusion::setSource(const cv::Mat &source_img, uint32_t id) {
 }
 
 int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
-			uint32_t id, uint32_t order, int multipleFace, std::function<void(uint64_t)> progress) {
+			uint32_t id, uint32_t order, int multipleFace, int genderMask, std::function<void(uint64_t)> progress) {
 	if(m_source_face_embedding_arr.empty()){
 		return -1;
 	}
@@ -182,13 +182,13 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 	if(boxes.empty()) {
 		return -1;
 	}
-	if(m_targetMask != 0) {
+	if(genderMask != 0) {
 		vector<Bbox> boxes_tmp;
 		for(auto &box : boxes) {
 			FaceClassifier::FaceGender gender = checkGender(target_img, box);
-			if((m_targetMask == 1) && gender == FaceClassifier::FEMALE) {
+			if((genderMask == 1) && gender == FaceClassifier::FEMALE) {
 				boxes_tmp.push_back(box);
-			} else if((m_targetMask == 2) && gender == FaceClassifier::MALE) {
+			} else if((genderMask == 2) && gender == FaceClassifier::MALE) {
 				boxes_tmp.push_back(box);
 			}
 		}
@@ -235,7 +235,7 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 	return 0;
 }
 
-int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32_t order) {
+int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32_t order, int genderMask) {
 	if(source_img.empty()){
         return -1;
     }
@@ -265,10 +265,10 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 		FaceClassifier::FaceRace reace = (FaceClassifier::FaceRace)face_classifier_id[0];
 		FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
 		FaceClassifier::FaceAge age = (FaceClassifier::FaceAge)face_classifier_id[2];
-		if(m_targetMask != 0) {
-			if((m_targetMask == 1) && gender != FaceClassifier::FEMALE) {
+		if(genderMask != 0) {
+			if((genderMask == 1) && gender != FaceClassifier::FEMALE) {
 				continue;
-			} else if((m_targetMask == 2) && gender != FaceClassifier::MALE) {
+			} else if((genderMask == 2) && gender != FaceClassifier::MALE) {
 				continue;
 			}
 		}
@@ -348,7 +348,7 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 int FaceFusion::faceSwap(const string &source_path, 
 						 const string &target_path, 
 						 const string &output_path, 
-						 uint32_t id, uint32_t order, int multipleFace) {
+						 uint32_t id, uint32_t order, int multipleFace, int genderMask) {
 	Mat source_img = imread(source_path);
 	Mat target_img = imread(target_path);
 	if(source_img.empty() || target_img.empty()){
@@ -364,6 +364,7 @@ int FaceFusion::faceSwap(const string &source_path,
 	Face68Landmarks detect_68landmarks_net(root_mod_path+"/2dfan4.onnx");
 	FaceEmbdding face_embedding_net(root_mod_path+"/arcface_w600k_r50.onnx");
 	SwapFace swap_face_net(root_mod_path+"/inswapper_128.onnx");
+	FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 	FaceEnhance enhance_face_net(root_mod_path+"/gfpgan_1.4.onnx");
 
     vector<Bbox> boxes;
@@ -377,6 +378,24 @@ int FaceFusion::faceSwap(const string &source_path,
 	vector<float> source_face_embedding = face_embedding_net.detect(source_img, face_landmark_5of68);
 
 	detect_face_net.detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
+	if(genderMask != 0) {
+		vector<Bbox> boxes_tmp;
+		for(auto &box : boxes) {
+			vector<Point2f> face_landmark_5of68;
+			detect_68landmarks_net.detect(target_img, box, face_landmark_5of68);
+			vector<int> face_classifier_id = face_classifier_net.detect(target_img, face_landmark_5of68);
+			FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
+			if((genderMask == 1) && gender == FaceClassifier::FEMALE) {
+				boxes_tmp.push_back(box);
+			} else if((genderMask == 2) && gender == FaceClassifier::MALE) {
+				boxes_tmp.push_back(box);
+			}
+		}
+		boxes = boxes_tmp;
+	}
 	if(boxes.empty()) {
 		return -1;
 	}
@@ -410,7 +429,7 @@ int FaceFusion::faceSwap(const string &source_path,
 int FaceFusion::faceSwap(const Mat &source_img, 
 						 const Mat &target_img, 
 						 Mat &output_img, 
-						 uint32_t id, uint32_t order, int multipleFace) {
+						 uint32_t id, uint32_t order, int multipleFace, int genderMask) {
 	if(source_img.empty() || target_img.empty()){
         return -1;
     }
@@ -423,6 +442,7 @@ int FaceFusion::faceSwap(const Mat &source_img,
 	Face68Landmarks detect_68landmarks_net(root_mod_path+"/2dfan4.onnx");
 	FaceEmbdding face_embedding_net(root_mod_path+"/arcface_w600k_r50.onnx");
 	SwapFace swap_face_net(root_mod_path+"/inswapper_128.onnx");
+	FaceClassifier face_classifier_net(root_mod_path+"/fairface.onnx");
 	FaceEnhance enhance_face_net(root_mod_path+"/gfpgan_1.4.onnx");
 
     vector<Bbox> boxes;
@@ -436,6 +456,24 @@ int FaceFusion::faceSwap(const Mat &source_img,
 	vector<float> source_face_embedding = face_embedding_net.detect(source_img, face_landmark_5of68);
 
 	detect_face_net.detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
+	if(genderMask != 0) {
+		vector<Bbox> boxes_tmp;
+		for(auto &box : boxes) {
+			vector<Point2f> face_landmark_5of68;
+			detect_68landmarks_net.detect(target_img, box, face_landmark_5of68);
+			vector<int> face_classifier_id = face_classifier_net.detect(target_img, face_landmark_5of68);
+			FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
+			if((genderMask == 1) && gender == FaceClassifier::FEMALE) {
+				boxes_tmp.push_back(box);
+			} else if((genderMask == 2) && gender == FaceClassifier::MALE) {
+				boxes_tmp.push_back(box);
+			}
+		}
+		boxes = boxes_tmp;
+	}
 	if(boxes.empty()) {
 		return -1;
 	}
