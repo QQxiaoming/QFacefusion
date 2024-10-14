@@ -135,4 +135,13 @@ inswapper_128.onnx     a3a155b90354160350efd66fed6b3d80
 yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
 ```
 
+## 相比[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)做的修改点
+
+- 修改只支持高版本onnxruntime，建议大于1.18.1，修复存在的内存泄漏
+- API接口增加输入检查对于异常输入正确报错防止发生不可预计错误
+- 增加对目标图像多个人脸的支持（包括指定id和设置排序关系，可通过接口setDetect获取人脸信息以供后续设置）
+- 增加faceclassifier从[facefusion](https://github.com/facefusion/facefusion)移植，以更好分类目标图像多个人脸
+
+## 致谢
+
 最后还是要感谢[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)和facefusion原项目，本项目只是做了些微不足道说明和封装，目的是方便小白使用。
