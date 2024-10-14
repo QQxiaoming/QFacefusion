@@ -2,6 +2,7 @@ SOURCES += \
     $$PWD/face68landmarks.cpp \
     $$PWD/faceenhancer.cpp \
     $$PWD/facerecognizer.cpp \
+    $$PWD/faceclassifier.cpp \
     $$PWD/faceswap.cpp \
     $$PWD/yolov8face.cpp \
     $$PWD/utils.cpp \
@@ -11,6 +12,7 @@ HEADERS += \
     $$PWD/face68landmarks.h \
     $$PWD/faceenhancer.h \
     $$PWD/facerecognizer.h \
+    $$PWD/faceclassifier.h \
     $$PWD/faceswap.h \
     $$PWD/yolov8face.h \
     $$PWD/model_matrix.bin.h \
@@ -70,6 +72,7 @@ unix:!macx:{
         -lopencv_stitching \
         -lopencv_highgui \
         -lopencv_video \
+        -lopencv_dnn \
         -lopencv_objdetect \
         -lopencv_calib3d \
         -lopencv_imgcodecs \
@@ -101,6 +104,7 @@ macx:{
         -lopencv_stitching \
         -lopencv_highgui \
         -lopencv_video \
+        -lopencv_dnn \
         -lopencv_objdetect \
         -lopencv_calib3d \
         -lopencv_imgcodecs \

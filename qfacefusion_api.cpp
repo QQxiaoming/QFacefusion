@@ -9,6 +9,7 @@ FaceFusion::FaceFusion(const std::string &model_path)
 	m_detect_face_net = new Yolov8Face(m_model_path+"/yoloface_8n.onnx");
 	m_detect_68landmarks_net = new Face68Landmarks(m_model_path+"/2dfan4.onnx");
 	m_face_embedding_net = new FaceEmbdding(m_model_path+"/arcface_w600k_r50.onnx");
+	m_face_classifier_net = new FaceClassifier(m_model_path+"/fairface.onnx");
 	m_swap_face_net = new SwapFace(m_model_path+"/inswapper_128.onnx");
 	m_enhance_face_net = new FaceEnhance(m_model_path+"/gfpgan_1.4.onnx");
 }
@@ -17,6 +18,7 @@ FaceFusion::~FaceFusion() {
 	delete m_detect_face_net;
 	delete m_detect_68landmarks_net;
 	delete m_face_embedding_net;
+	delete m_face_classifier_net;
 	delete m_swap_face_net;
 	delete m_enhance_face_net;
 }
@@ -46,6 +48,14 @@ template<typename T> void FaceFusion::sortBoxes(std::vector<T> &boxes, uint32_t 
 	}
 }
 
+FaceClassifier::FaceGender FaceFusion::checkGender(const cv::Mat &source_img, const Bbox &box) {
+    vector<Point2f> face_landmark_5of68;
+	m_detect_68landmarks_net->detect(source_img, box, face_landmark_5of68);
+	vector<int> face_classifier_id = m_face_classifier_net->detect(source_img, face_landmark_5of68);
+	FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
+	return gender;
+}
+
 int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv::Mat &output_img,
 			uint32_t id, uint32_t order, int multipleFace, std::function<void(uint64_t)> progress) {
 	if(source_img.empty() || target_img.empty()){
@@ -70,6 +80,21 @@ int FaceFusion::runSwap(const cv::Mat &source_img, const cv::Mat &target_img, cv
 
     if(progress) progress(40);
     m_detect_face_net->detect(target_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
+	if(m_targetMask != 0) {
+		vector<Bbox> boxes_tmp;
+		for(auto &box : boxes) {
+			FaceClassifier::FaceGender gender = checkGender(target_img, box);
+			if((m_targetMask == 1) && gender == FaceClassifier::FEMALE) {
+				boxes_tmp.push_back(box);
+			} else if((m_targetMask == 2) && gender == FaceClassifier::MALE) {
+				boxes_tmp.push_back(box);
+			}
+		}
+		boxes = boxes_tmp;
+	}
 	if(boxes.empty()) {
 		return -1;
 	}
@@ -157,6 +182,21 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 	if(boxes.empty()) {
 		return -1;
 	}
+	if(m_targetMask != 0) {
+		vector<Bbox> boxes_tmp;
+		for(auto &box : boxes) {
+			FaceClassifier::FaceGender gender = checkGender(target_img, box);
+			if((m_targetMask == 1) && gender == FaceClassifier::FEMALE) {
+				boxes_tmp.push_back(box);
+			} else if((m_targetMask == 2) && gender == FaceClassifier::MALE) {
+				boxes_tmp.push_back(box);
+			}
+		}
+		boxes = boxes_tmp;
+	}
+	if(boxes.empty()) {
+		return -1;
+	}
 	sortBoxes(boxes, order);
 	if((multipleFace == 2) || (multipleFace == 1)) {
     	if(progress) progress(30);
@@ -205,15 +245,101 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 	vector<BboxWithKP5> boxes;
     m_detect_face_net->detect_with_kp5(source_img, boxes);
 	sortBoxes(boxes, order);
+
+	vector<Bbox> boxesNotKp5;
+	for(auto &box : boxes) {
+		Bbox bbox;
+		bbox.xmin = box.xmin;
+		bbox.ymin = box.ymin;
+		bbox.xmax = box.xmax;
+		bbox.ymax = box.ymax;
+		boxesNotKp5.push_back(bbox);
+	}
+
 	cv::Mat temp_vision_frame = source_img.clone();
+	int face_count = 0;
     for (size_t i = 0; i < boxes.size(); i++){
+		vector<Point2f> face_landmark_5of68;
+		m_detect_68landmarks_net->detect(source_img, boxesNotKp5[i], face_landmark_5of68);
+		vector<int> face_classifier_id = m_face_classifier_net->detect(source_img, face_landmark_5of68);
+		FaceClassifier::FaceRace reace = (FaceClassifier::FaceRace)face_classifier_id[0];
+		FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
+		FaceClassifier::FaceAge age = (FaceClassifier::FaceAge)face_classifier_id[2];
+		if(m_targetMask != 0) {
+			if((m_targetMask == 1) && gender != FaceClassifier::FEMALE) {
+				continue;
+			} else if((m_targetMask == 2) && gender != FaceClassifier::MALE) {
+				continue;
+			}
+		}
 		cv::rectangle(temp_vision_frame, cv::Point(boxes[i].xmin, boxes[i].ymin), cv::Point(boxes[i].xmax, boxes[i].ymax), cv::Scalar(0, 255, 0), 2);
 		for (int j = 0; j < 5; j++){
 			cv::circle(temp_vision_frame, cv::Point(boxes[i].kp5[j].x, boxes[i].kp5[j].y), 2, cv::Scalar(0, 255, 0), 2);
 		}
 		cv::Point point = cv::Point(boxes[i].xmin, boxes[i].ymin);
 		if (point.y < 3) point.y += 3; else point.y -= 3;
-		cv::putText(temp_vision_frame, std::to_string(i), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+		cv::putText(temp_vision_frame, std::to_string(face_count++), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+		
+		switch(gender) {
+			case FaceClassifier::MALE:
+				cv::putText(temp_vision_frame, "male", cv::Point(boxes[i].xmin, boxes[i].ymin+20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::FEMALE:
+				cv::putText(temp_vision_frame, "female", cv::Point(boxes[i].xmin, boxes[i].ymin+20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			default:
+				cv::putText(temp_vision_frame, "male", cv::Point(boxes[i].xmin, boxes[i].ymin+20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+		}
+		switch(age) {
+			case FaceClassifier::AGE_0_2:
+				cv::putText(temp_vision_frame, "0-2", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_3_9:
+				cv::putText(temp_vision_frame, "3-9", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_10_19:
+				cv::putText(temp_vision_frame, "10-19", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_20_29:
+				cv::putText(temp_vision_frame, "20-29", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_30_39:
+				cv::putText(temp_vision_frame, "30-39", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_40_49:
+				cv::putText(temp_vision_frame, "40-49", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_50_59:
+				cv::putText(temp_vision_frame, "50-59", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::AGE_60_69:
+				cv::putText(temp_vision_frame, "60-69", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			default:
+			case FaceClassifier::AGE_70_100:
+				cv::putText(temp_vision_frame, "70-100", cv::Point(boxes[i].xmin, boxes[i].ymin+40), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+		}
+		switch(reace) {
+			default:
+			case FaceClassifier::WHITE:
+				cv::putText(temp_vision_frame, "white", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::BLACK:
+				cv::putText(temp_vision_frame, "black", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::LATINO:
+			case FaceClassifier::ASIAN:
+				cv::putText(temp_vision_frame, "asian", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::INDIAN:
+				cv::putText(temp_vision_frame, "indian", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+			case FaceClassifier::ARABIC:
+				cv::putText(temp_vision_frame, "arabic", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+				break;
+		}
 	}
 	output_img = temp_vision_frame;
     return 0;

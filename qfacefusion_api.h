@@ -8,6 +8,7 @@
 #include "facerecognizer.h"
 #include "faceswap.h"
 #include "faceenhancer.h"
+#include "faceclassifier.h"
 
 class FaceFusion {
 public:
@@ -26,7 +27,9 @@ public:
                 std::function<void(uint64_t)> progress = nullptr);
     int setDetect(const cv::Mat &source_img, cv::Mat &output_img, 
                 uint32_t order = 0);
-
+    void setTargetMask(int mask) {
+        m_targetMask = mask;
+    }
     static int faceSwap(const std::string &source_path, 
                         const std::string &target_path, 
                         const std::string &output_path, 
@@ -40,17 +43,20 @@ public:
 
 private:
     template<typename T> static void sortBoxes(std::vector<T> &boxes, uint32_t order);
+    FaceClassifier::FaceGender checkGender(const cv::Mat &source_img, const FaceFusionUtils::Bbox &box);
 
 private:
     std::string m_model_path;
     Yolov8Face *m_detect_face_net = nullptr;
 	Face68Landmarks *m_detect_68landmarks_net = nullptr;
 	FaceEmbdding *m_face_embedding_net = nullptr;
+	FaceClassifier *m_face_classifier_net = nullptr;
 	SwapFace *m_swap_face_net = nullptr;
 	FaceEnhance *m_enhance_face_net = nullptr;
 
     bool m_source = false;
     std::vector<std::vector<float>> m_source_face_embedding_arr;
+    int m_targetMask = 0;
 };
 
 #ifdef USE_QT_WRAPPER
@@ -119,6 +125,9 @@ public:
         int ret = faswap->setDetect(source_mat, output_mat, order);
         output_img = to_qimage(output_mat);
         return ret;
+    }
+    void setTargetMask(int mask) {
+        faswap->setTargetMask(mask);
     }
     static cv::Mat to_cvmat(QImage img) {
         img = img.convertToFormat(QImage::Format_RGB888, Qt::ColorOnly).rgbSwapped();
@@ -214,6 +223,10 @@ public:
     }
     void setTargetFaceOrder(uint32_t order) {
         m_targetFaceOrder = order;
+    }
+    void setTargetMask(int mask) {
+        if(faswap)
+            faswap->setTargetMask(mask);
     }
 
 signals:
