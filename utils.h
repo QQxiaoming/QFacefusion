@@ -27,6 +27,7 @@ typedef struct
     float ymin;
     float xmax;
     float ymax;
+    float score;
     KeyPoint kp5[5];
 } BboxWithKP5;
 

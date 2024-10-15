@@ -35,6 +35,9 @@ public:
                 cv::Mat &output_img,
                 uint32_t order = 0,
                 int genderMask = 0);
+    void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
+        m_detect_face_net->setThreshold(conf_thres, iou_thresh);
+	}
     static int faceSwap(const std::string &source_path, 
                         const std::string &target_path, 
                         const std::string &output_path, 
@@ -134,6 +137,9 @@ public:
         output_img = to_qimage(output_mat);
         return ret;
     }
+    void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
+        faswap->setFaceDetectThreshold(conf_thres, iou_thresh);
+    }
     static cv::Mat to_cvmat(QImage img) {
         img = img.convertToFormat(QImage::Format_RGB888, Qt::ColorOnly).rgbSwapped();
         return cv::Mat(img.height(), img.width(), CV_8UC3, img.bits(), img.bytesPerLine()).clone();
@@ -178,6 +184,8 @@ public:
         ImgType type;
         QImage img;
         QStringList args;
+        float conf_thres;
+        float iou_thresh;
     };
     explicit QFaceFusionThread(const QString &model_path, QObject *parent = nullptr)
         : QThread(parent), modelPath(model_path) {
@@ -188,11 +196,11 @@ public:
         condition.wakeOne();
         wait();
     }
-    void setSource(const QImage& img, uint32_t id = 0) {
+    void setSource(const QImage& img, uint32_t id = 0, const float conf_thres = 0.5f, const float iou_thresh = 0.4f) {
         QStringList args;
         args.append(QString::number(id));
         QMutexLocker locker(&mutex);
-        msg_t msg = { source, img, args};
+        msg_t msg = { source, img, args, conf_thres, iou_thresh};
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -200,19 +208,19 @@ public:
         QStringList args;
         args.append(QString::number(-1));
         QMutexLocker locker(&mutex);
-        msg_t msg = { source, QImage(), args};
+        msg_t msg = { source, QImage(), args, 0.5f, 0.4f};
         msgList.enqueue(msg);
         condition.wakeOne();
     }
-    void setTarget(const QImage& img, const QStringList &args = QStringList()) {
+    void setTarget(const QImage& img, const QStringList &args = QStringList(), const float conf_thres = 0.5f, const float iou_thresh = 0.4f) {
         QMutexLocker locker(&mutex);
-        msg_t msg = { target, img, args };
+        msg_t msg = { target, img, args, conf_thres, iou_thresh };
         msgList.enqueue(msg);
         condition.wakeOne();
     }
-    void setDetect(const QImage& img, const QStringList &args = QStringList()) {
+    void setDetect(const QImage& img, const QStringList &args = QStringList(), const float conf_thres = 0.5f, const float iou_thresh = 0.4f) {
         QMutexLocker locker(&mutex);
-        msg_t msg = { detect, img, args };
+        msg_t msg = { detect, img, args, conf_thres, iou_thresh };
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -258,6 +266,7 @@ protected:
             }
             msg_t msg = msgList.dequeue();
             mutex.unlock();
+            faswap->setFaceDetectThreshold(msg.conf_thres,msg.iou_thresh);
             if (msg.type == source) {
                 int32_t id = msg.args.isEmpty() ? 0 : msg.args[0].toInt();
                 if(id < 0) {

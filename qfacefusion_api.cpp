@@ -278,7 +278,7 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 		}
 		cv::Point point = cv::Point(boxes[i].xmin, boxes[i].ymin);
 		if (point.y < 3) point.y += 3; else point.y -= 3;
-		cv::putText(temp_vision_frame, std::to_string(face_count++), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+		cv::putText(temp_vision_frame, std::to_string(face_count++)+":"+std::to_string(boxes[i].score), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
 		
 		switch(gender) {
 			case FaceClassifier::MALE:
