@@ -133,4 +133,20 @@ Mat blend_frame(Mat temp_vision_frame, Mat paste_vision_frame, const int FACE_EN
     return dstimg;
 }
 
+float dot_product(const std::vector<float>& vec1, const std::vector<float>& vec2) {
+    if (vec1.size() != vec2.size()) {
+        throw std::invalid_argument("Vectors must be of the same length");
+    }
+
+    vector<float> normed_vec1(vec1.size());
+    float norm1 = std::sqrt(std::inner_product(vec1.begin(), vec1.end(), vec1.begin(), 0.0f));
+    std::transform(vec1.begin(), vec1.end(), normed_vec1.begin(), [norm1](float val) { return val / norm1; });
+
+    vector<float> normed_vec2(vec1.size());
+    float norm2 = std::sqrt(std::inner_product(vec2.begin(), vec2.end(), vec2.begin(), 0.0f));
+    std::transform(vec2.begin(), vec2.end(), normed_vec2.begin(), [norm2](float val) { return val / norm2; });
+
+    return std::inner_product(normed_vec1.begin(), normed_vec1.end(), normed_vec2.begin(), 0.0f);
+}
+
 }

@@ -164,6 +164,37 @@ int FaceFusion::setSource(const cv::Mat &source_img, uint32_t id) {
     return 0;
 }
 
+void FaceFusion::clearReference(void) {
+	m_reference_face_embedding_arr.clear();
+}
+
+int FaceFusion::setReference(const cv::Mat &reference_img, uint32_t id) {
+	if(m_reference_face_embedding_arr.size() < id) {
+        return -1;
+	}
+	if(reference_img.empty()){
+        return -1;
+    }
+	if (reference_img.channels() != 3) {
+        return -1;
+    }
+	vector<Bbox> boxes;
+    m_detect_face_net->detect(reference_img, boxes);
+	if(boxes.empty()) {
+		return -1;
+	}
+	int position = 0; ////一张图片里可能有多个人脸，这里只考虑1个人脸的情况
+	vector<Point2f> face_landmark_5of68;
+    m_detect_68landmarks_net->detect(reference_img, boxes[position], face_landmark_5of68);
+    vector<float> reference_face_embedding = m_face_embedding_net->detect(reference_img, face_landmark_5of68);
+	if(m_reference_face_embedding_arr.size() == id) {
+		m_reference_face_embedding_arr.push_back(reference_face_embedding);
+	} else {
+		m_reference_face_embedding_arr[id] = reference_face_embedding;
+	}
+    return 0;
+}
+
 int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 			uint32_t id, uint32_t order, int multipleFace, int genderMask, std::function<void(uint64_t)> progress) {
 	if(m_source_face_embedding_arr.empty()){
@@ -197,7 +228,53 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 	if(boxes.empty()) {
 		return -1;
 	}
-	sortBoxes(boxes, order);
+    std::vector<std::vector<float>> source_face_embedding_arr;
+	if(m_reference_face_embedding_arr.empty()) {
+		// 按照order排序
+		sortBoxes(boxes, order);
+		source_face_embedding_arr = m_source_face_embedding_arr;
+	} else {
+		// 按照与reference_face_embedding的相似度排序
+		struct BboxWithSimilarity {
+			Bbox box;
+			vector<float> similarity;
+		};
+		vector<BboxWithSimilarity> boxes_tmp;
+		for(auto &box : boxes) {
+			BboxWithSimilarity bbox;
+			bbox.box.xmin = box.xmin;
+    		bbox.box.ymin = box.ymin;
+    		bbox.box.xmax = box.xmax;
+    		bbox.box.ymax = box.ymax;
+			vector<Point2f> target_landmark_5;
+			m_detect_68landmarks_net->detect(target_img, box, target_landmark_5);
+			for(auto &reference_face_embedding : m_reference_face_embedding_arr) {
+				vector<float> target_face_embedding = m_face_embedding_net->detect(target_img, target_landmark_5);
+				float sim = dot_product(reference_face_embedding, target_face_embedding);
+				bbox.similarity.push_back(sim);
+			}
+			boxes_tmp.push_back(bbox);
+		}
+		boxes.clear();
+		for(size_t i = 0; i < m_reference_face_embedding_arr.size(); i++) {
+			sort(boxes_tmp.begin(), boxes_tmp.end(), [i](const BboxWithSimilarity &a, const BboxWithSimilarity &b) {
+                return a.similarity.at(i) < b.similarity.at(i);
+			});
+            BboxWithSimilarity temp = boxes_tmp.back();
+			if(temp.similarity.at(i) > m_similarity_threshold) {
+				boxes_tmp.pop_back();
+				Bbox max;
+				max.xmin = temp.box.xmin;
+				max.ymin = temp.box.ymin;
+				max.xmax = temp.box.xmax;
+				max.ymax = temp.box.ymax;
+				boxes.push_back(max);
+				if(m_source_face_embedding_arr.size() > i) {
+					source_face_embedding_arr.push_back(m_source_face_embedding_arr.at(i));
+				}
+			}
+		}
+	}
 	if((multipleFace == 2) || (multipleFace == 1)) {
     	if(progress) progress(30);
 		output_img = target_img;
@@ -210,9 +287,10 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 
 			if(progress) progress(30+i*70/boxes.size()+20/boxes.size());
 			uint32_t source_id = 0;
-			if(multipleFace == 2)
-				source_id = i % m_source_face_embedding_arr.size();
-            Mat swapimg = m_swap_face_net->process(output_img, m_source_face_embedding_arr[source_id], target_landmark_5);
+			if(multipleFace == 2) {
+				source_id = i % source_face_embedding_arr.size();
+			}
+            Mat swapimg = m_swap_face_net->process(output_img, source_face_embedding_arr[source_id], target_landmark_5);
 			if(progress) progress(30+i*70/boxes.size()+50/boxes.size());
 			output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
 			if(progress) progress(30+i*70/boxes.size()+70/boxes.size());
@@ -339,6 +417,13 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 			case FaceClassifier::ARABIC:
 				cv::putText(temp_vision_frame, "arabic", cv::Point(boxes[i].xmin, boxes[i].ymin+60), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
 				break;
+		}
+		vector<float> target_face_embedding = m_face_embedding_net->detect(source_img, face_landmark_5of68);
+		int refIndex = 0;
+		for(auto &reference_face_embedding : m_reference_face_embedding_arr) {
+			float sim = dot_product(reference_face_embedding, target_face_embedding);
+			cv::putText(temp_vision_frame, "sim"+std::to_string(refIndex)+":"+std::to_string(sim), cv::Point(boxes[i].xmin, boxes[i].ymin+80+refIndex*20), cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
+			refIndex++;
 		}
 	}
 	output_img = temp_vision_frame;

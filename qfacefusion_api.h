@@ -16,6 +16,8 @@ public:
     ~FaceFusion();
     int setSource(const cv::Mat &source_img, uint32_t id = 0);
     void clearSource(void);
+    int setReference(const cv::Mat &reference_img, uint32_t id = 0);
+    void clearReference(void);
     int runSwap(const cv::Mat &target_img, 
                 cv::Mat &output_img, 
                 uint32_t id = 0, 
@@ -68,6 +70,8 @@ private:
 
     bool m_source = false;
     std::vector<std::vector<float>> m_source_face_embedding_arr;
+    std::vector<std::vector<float>> m_reference_face_embedding_arr;
+    float m_similarity_threshold = 0.4;
 };
 
 #ifdef USE_QT_WRAPPER
@@ -97,6 +101,13 @@ public:
     }
     void clearSource(void) {
         faswap->clearSource();
+    }
+    int setReference(const QImage &source_img, uint32_t id = 0) {
+        cv::Mat source_mat = to_cvmat(source_img);
+        return faswap->setReference(source_mat, id);
+    }
+    void clearReference(void) {
+        faswap->clearReference();
     }
     int runSwap(const QImage &target_img, QImage &output_img, 
                 uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, int genderMask = 0,
@@ -178,7 +189,8 @@ public:
     enum ImgType {
         source,
         target,
-        detect
+        detect,
+        reference,
     };
     struct msg_t {
         ImgType type;
@@ -209,6 +221,22 @@ public:
         args.append(QString::number(-1));
         QMutexLocker locker(&mutex);
         msg_t msg = { source, QImage(), args, 0.5f, 0.4f};
+        msgList.enqueue(msg);
+        condition.wakeOne();
+    }
+    void setReference(const QImage& img, uint32_t id = 0, const float conf_thres = 0.5f, const float iou_thresh = 0.4f) {
+        QStringList args;
+        args.append(QString::number(id));
+        QMutexLocker locker(&mutex);
+        msg_t msg = { reference, img, args, conf_thres, iou_thresh};
+        msgList.enqueue(msg);
+        condition.wakeOne();
+    }
+    void clearReference(void) {
+        QStringList args;
+        args.append(QString::number(-1));
+        QMutexLocker locker(&mutex);
+        msg_t msg = { reference, QImage(), args, 0.5f, 0.4f};
         msgList.enqueue(msg);
         condition.wakeOne();
     }
@@ -273,6 +301,13 @@ protected:
                     faswap->clearSource();
                 } else {
                     faswap->setSource(msg.img,id);
+                }
+            } else if (msg.type == reference) {
+                int32_t id = msg.args.isEmpty() ? 0 : msg.args[0].toInt();
+                if(id < 0) {
+                    faswap->clearReference();
+                } else {
+                    faswap->setReference(msg.img,id);
                 }
             } else if (msg.type == target) {
                 QImage output;
