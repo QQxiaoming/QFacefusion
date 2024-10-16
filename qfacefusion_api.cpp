@@ -275,6 +275,9 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 				}
 			}
 		}
+		if(boxes.empty()) {
+			return -1;
+		}
 	}
 	if((multipleFace == 2) || (multipleFace == 1)) {
     	if(progress) progress(30);
