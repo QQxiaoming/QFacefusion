@@ -196,7 +196,8 @@ int FaceFusion::setReference(const cv::Mat &reference_img, uint32_t id) {
 }
 
 int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
-			uint32_t id, uint32_t order, int multipleFace, int genderMask, std::function<void(uint64_t)> progress) {
+			uint32_t id, uint32_t order, int multipleFace, int genderMask, float similar_thres,
+			std::function<void(uint64_t)> progress) {
 	if(m_source_face_embedding_arr.empty()){
 		return -1;
 	}
@@ -261,7 +262,7 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
                 return a.similarity.at(i) < b.similarity.at(i);
 			});
             BboxWithSimilarity temp = boxes_tmp.back();
-			if(temp.similarity.at(i) > m_similarity_threshold) {
+			if(temp.similarity.at(i) > similar_thres) {
 				boxes_tmp.pop_back();
 				Bbox max;
 				max.xmin = temp.box.xmin;

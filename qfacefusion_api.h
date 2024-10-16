@@ -24,6 +24,7 @@ public:
                 uint32_t order = 0, 
                 int multipleFace = 0, 
                 int genderMask = 0,
+                float similar_thres = 0.4f,
                 std::function<void(uint64_t)> progress = nullptr);
     int runSwap(const cv::Mat &source_img, 
                 const cv::Mat &target_img, 
@@ -71,7 +72,6 @@ private:
     bool m_source = false;
     std::vector<std::vector<float>> m_source_face_embedding_arr;
     std::vector<std::vector<float>> m_reference_face_embedding_arr;
-    float m_similarity_threshold = 0.4;
 };
 
 #ifdef USE_QT_WRAPPER
@@ -110,13 +110,13 @@ public:
         faswap->clearReference();
     }
     int runSwap(const QImage &target_img, QImage &output_img, 
-                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, int genderMask = 0,
+                uint32_t id = 0, uint32_t order = 0, int multipleFace = 0, int genderMask = 0, float similar_thres = 0.4f,
                 std::function<void(uint64_t)> progress = nullptr) {
         if(progress) progress(1);
         cv::Mat target_mat = to_cvmat(target_img);
         if(progress) progress(2);
         cv::Mat output_mat;
-        int ret = faswap->runSwap(target_mat, output_mat, id, order, multipleFace, genderMask, [progress](uint64_t vale) {
+        int ret = faswap->runSwap(target_mat, output_mat, id, order, multipleFace, genderMask, similar_thres, [progress](uint64_t vale) {
             if(progress) progress(2+vale*96/100);
         });
         if(progress) progress(99);
@@ -268,6 +268,9 @@ public:
     void setGenderMask(int mask) {
         m_genderMask = mask;
     }
+    void setSimilarityThreshold(float thres) {
+        m_similar_thres = thres;
+    }
 
 signals:
     void loadModelState(uint32_t state);
@@ -313,7 +316,7 @@ protected:
                 QImage output;
                 emit swapProgress(2);
                 int ret = faswap->runSwap(msg.img, output, 
-                    m_targetFaceId, m_targetFaceOrder, m_multipleFace, m_genderMask,
+                    m_targetFaceId, m_targetFaceOrder, m_multipleFace, m_genderMask, m_similar_thres,
                     [this](uint64_t progress) {
                     emit swapProgress(2+progress*97/100);
                 });
@@ -348,6 +351,7 @@ private:
     uint32_t m_targetFaceId = 0;
     uint32_t m_targetFaceOrder = 0;
     int m_genderMask = 0;
+    float m_similar_thres = 0.4f;
 };
 
 #endif
