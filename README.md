@@ -139,8 +139,9 @@ yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
 
 - 修改只支持高版本onnxruntime，建议大于1.18.1，修复存在的内存泄漏
 - API接口增加输入检查对于异常输入正确报错防止发生不可预计错误
-- 增加对目标图像多个人脸的支持（包括指定id和设置排序关系，可通过接口setDetect获取人脸信息以供后续设置）
+- 增加对目标图像多个人脸的支持（包括指定id和设置排序关系、接口setReference设置参考脸、接口setDetect获取人脸信息等工具）
 - 增加faceclassifier从[facefusion](https://github.com/facefusion/facefusion)移植，以更好分类目标图像多个人脸
+- 增加示例代码，方便参考[examples](./examples)
 
 ## 致谢
 

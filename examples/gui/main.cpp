@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addWidget(labelWidget);
+    mainLayout->addStretch();
     mainLayout->addWidget(pushButtonWidget);
     mainLayout->addWidget(startPushButton);
     QWidget *main = new QWidget;
