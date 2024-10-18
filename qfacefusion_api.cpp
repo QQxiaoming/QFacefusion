@@ -348,7 +348,7 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 	int face_count = 0;
     for (size_t i = 0; i < boxes.size(); i++){
 		vector<Point2f> face_landmark_5of68;
-		m_detect_68landmarks_net->detect(source_img, boxesNotKp5[i], face_landmark_5of68);
+		vector<Point2f> face68landmarks = m_detect_68landmarks_net->detect(source_img, boxesNotKp5[i], face_landmark_5of68);
 		vector<int> face_classifier_id = m_face_classifier_net->detect(source_img, face_landmark_5of68);
 		FaceClassifier::FaceRace reace = (FaceClassifier::FaceRace)face_classifier_id[0];
 		FaceClassifier::FaceGender gender = (FaceClassifier::FaceGender)face_classifier_id[1];
@@ -361,9 +361,18 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 			}
 		}
 		cv::rectangle(temp_vision_frame, cv::Point(boxes[i].xmin, boxes[i].ymin), cv::Point(boxes[i].xmax, boxes[i].ymax), cv::Scalar(0, 255, 0), 2);
-		for (int j = 0; j < 5; j++){
-			cv::circle(temp_vision_frame, cv::Point(boxes[i].kp5[j].x, boxes[i].kp5[j].y), 2, cv::Scalar(0, 255, 0), 2);
+		for (int j = 0; j < 68; j++){
+			Point2f face_landmark = face68landmarks.at(j);
+			cv::circle(temp_vision_frame, face_landmark, 2, cv::Scalar(255, 255, 0), -1);		
 		}
+		for (int j = 0; j < 5; j++){
+			Point2f face_landmark = face_landmark_5of68.at(j);
+			cv::circle(temp_vision_frame, face_landmark, 4, cv::Scalar(0, 0, 255), 2);		
+		}
+		for (int j = 0; j < 5; j++){
+			cv::circle(temp_vision_frame, cv::Point(boxes[i].kp5[j].x, boxes[i].kp5[j].y), 3, cv::Scalar(0, 255, 0), 2);
+		}
+
 		cv::Point point = cv::Point(boxes[i].xmin, boxes[i].ymin);
 		if (point.y < 3) point.y += 3; else point.y -= 3;
 		cv::putText(temp_vision_frame, std::to_string(face_count++)+":"+std::to_string(boxes[i].score), point, cv::FONT_HERSHEY_SIMPLEX, 0.8, cv::Scalar(0, 255, 0), 2);
