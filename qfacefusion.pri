@@ -24,7 +24,7 @@ INCLUDEPATH += $$PWD
 DEFINES += USE_QT_WRAPPER
 DEFINES += MODEL_PATH=\\\"$$PWD/model\\\"
 
-win32:{
+win32:!wasm {
     DEFINES += WINDOWS_FACEFUSION_BUILD
     DEFINES += CUDA_FACEFUSION_BUILD
         
@@ -57,7 +57,7 @@ win32:{
     LIBS += -L$${ONNXRUNTIME_DIR}/lib/ -lonnxruntime
 }
 
-unix:!macx:{
+unix:!macx:!android:!ios:!wasm {
     DEFINES += LINUX_FACEFUSION_BUILD
     #DEFINES += CUDA_FACEFUSION_BUILD
 
@@ -89,7 +89,7 @@ unix:!macx:{
 
 }
 
-macx:{
+macx:!ios:!wasm {
     DEFINES += MACOS_FACEFUSION_BUILD
     DEFINES += COREML_FACEFUSION_BUILD
 
@@ -118,4 +118,12 @@ macx:{
     INCLUDEPATH += -I $${ONNXRUNTIME_DIR}/include
     DEPENDPATH +=$${ONNXRUNTIME_DIR}/include
     LIBS += -L$${ONNXRUNTIME_DIR}/lib/ -lonnxruntime
+}
+
+android { 
+
+}
+
+ios {
+
 }
