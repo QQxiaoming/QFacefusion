@@ -41,6 +41,12 @@ public:
     void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
         m_detect_face_net->setThreshold(conf_thres, iou_thresh);
 	}
+    uint32_t getFindFace(void){
+        return m_findFace;
+    }
+    std::vector<std::vector<float>> getFindSimilarity(void){
+        return m_Similarity;
+    }
     static int faceSwap(const std::string &source_path, 
                         const std::string &target_path, 
                         const std::string &output_path, 
@@ -72,6 +78,9 @@ private:
     bool m_source = false;
     std::vector<std::vector<float>> m_source_face_embedding_arr;
     std::vector<std::vector<float>> m_reference_face_embedding_arr;
+
+    uint32_t m_findFace = 0;
+    std::vector<std::vector<float>> m_Similarity;
 };
 
 #ifdef USE_QT_WRAPPER
@@ -150,6 +159,21 @@ public:
     }
     void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
         faswap->setFaceDetectThreshold(conf_thres, iou_thresh);
+    }
+    uint32_t getFindFace(void){
+        return faswap->getFindFace();
+    }
+    QList<QList<float>> getFindSimilarity(void){
+        std::vector<std::vector<float>> similarity = faswap->getFindSimilarity();
+        QList<QList<float>> list;
+        for(auto &sim : similarity) {
+            QList<float> l;
+            for(auto &s : sim) {
+                l.append(s);
+            }
+            list.append(l);
+        }
+        return list;
     }
     static cv::Mat to_cvmat(QImage img) {
         img = img.convertToFormat(QImage::Format_RGB888, Qt::ColorOnly).rgbSwapped();
@@ -275,7 +299,10 @@ public:
 signals:
     void loadModelState(uint32_t state);
     void swapProgress(uint64_t progress);
-    void swapFinished(bool ok, const QImage& target, const QImage& output, const QStringList &args = QStringList());
+    void swapFinished(bool ok, 
+                      const QImage& target, const QImage& output, 
+                      const QStringList &args = QStringList(),
+                      uint32_t findFace = 0, QList<QList<float>> findSimilarity = QList<QList<float>>());
 
 protected:
     void run() override {
@@ -324,7 +351,9 @@ protected:
                 if(ret < 0) {
                     emit swapFinished(false, msg.img, msg.img, msg.args);
                 } else {
-                    emit swapFinished(true, msg.img, output, msg.args);
+                    uint32_t findFace = faswap->getFindFace();
+                    QList<QList<float>> findSimilarity = faswap->getFindSimilarity();
+                    emit swapFinished(true, msg.img, output, msg.args, findFace, findSimilarity);
                 }
             } else if (msg.type == detect) {
                 QImage output;

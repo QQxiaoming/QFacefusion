@@ -198,6 +198,8 @@ int FaceFusion::setReference(const cv::Mat &reference_img, uint32_t id) {
 int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 			uint32_t id, uint32_t order, int multipleFace, int genderMask, float similar_thres,
 			std::function<void(uint64_t)> progress) {
+	m_findFace = 0;
+	m_Similarity.clear();
 	if(m_source_face_embedding_arr.empty()){
 		return -1;
 	}
@@ -229,6 +231,7 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 	if(boxes.empty()) {
 		return -1;
 	}
+	m_findFace = boxes.size();
     std::vector<std::vector<float>> source_face_embedding_arr;
 	if(m_reference_face_embedding_arr.empty()) {
 		// 按照order排序
@@ -249,12 +252,15 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
     		bbox.box.ymax = box.ymax;
 			vector<Point2f> target_landmark_5;
 			m_detect_68landmarks_net->detect(target_img, box, target_landmark_5);
+			std::vector<float> find_similarity;
 			for(auto &reference_face_embedding : m_reference_face_embedding_arr) {
 				vector<float> target_face_embedding = m_face_embedding_net->detect(target_img, target_landmark_5);
 				float sim = dot_product(reference_face_embedding, target_face_embedding);
 				bbox.similarity.push_back(sim);
+				find_similarity.push_back(sim);
 			}
 			boxes_tmp.push_back(bbox);
+			m_Similarity.push_back(find_similarity);
 		}
 		boxes.clear();
 		for(size_t i = 0; i < m_reference_face_embedding_arr.size(); i++) {
