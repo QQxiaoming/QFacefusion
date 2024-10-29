@@ -145,4 +145,4 @@ yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
 
 ## 致谢
 
-最后还是要感谢[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)和facefusion原项目，本项目只是做了些微不足道说明和封装，目的是方便小白使用。
+最后还是要感谢[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)和[facefusion](https://github.com/facefusion/facefusion)原项目，本项目只是做了些微不足道说明和封装，目的是方便小白使用。

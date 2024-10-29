@@ -1,3 +1,8 @@
+#include <onnxruntime_cxx_api.h>
+#if defined(COREML_FACEFUSION_BUILD)
+#include <coreml_provider_factory.h>
+#endif
+
 #include "qfacefusion_api.h"
 
 using namespace cv;
@@ -605,3 +610,154 @@ int FaceFusion::faceSwap(const Mat &source_img,
 	
     return 0;
 }
+
+string FaceFusion::getModelInfo(string model_path) {
+	stringstream info;
+	
+    using namespace Ort;
+    SessionOptions sessionOptions = SessionOptions();
+    Env env(ORT_LOGGING_LEVEL_ERROR, "getModelInfo");
+
+#if defined(CUDA_FACEFUSION_BUILD)
+    try {
+        OrtCUDAProviderOptions cuda_options;
+        sessionOptions.AppendExecutionProvider_CUDA(cuda_options);
+    } catch (const Ort::Exception& e) {
+        std::cerr << "Error appending CUDA execution provider: " << e.what() << std::endl;
+    }
+#endif
+#if defined(COREML_FACEFUSION_BUILD)
+    OrtSessionOptionsAppendExecutionProvider_CoreML(sessionOptions,COREML_FLAG_ENABLE_ON_SUBGRAPH);
+#endif
+
+    sessionOptions.SetGraphOptimizationLevel(ORT_ENABLE_BASIC);
+#if defined(WINDOWS_FACEFUSION_BUILD)
+    std::wstring widestr = std::wstring(model_path.begin(), model_path.end());
+    Session ort_session(env, widestr.c_str(), sessionOptions);
+#endif
+#if defined(LINUX_FACEFUSION_BUILD) || defined(MACOS_FACEFUSION_BUILD)
+    Session ort_session(env, model_path.c_str(), sessionOptions);
+#endif
+
+	std::function<std::string(ONNXTensorElementDataType)> getDataTypeName = [](ONNXTensorElementDataType dataType) {
+		switch (dataType) {
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED:
+			return "UNDEFINED";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
+			return "FLOAT";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
+			return "UINT8";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:
+			return "INT8";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16:
+			return "UINT16";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:
+			return "INT16";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+			return "INT32";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
+			return "INT64";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:
+			return "STRING";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:
+			return "BOOL";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:
+			return "FLOAT16";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE:
+			return "DOUBLE";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32:
+			return "UINT32";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64:
+			return "UINT64";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX64:
+			return "COMPLEX64";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX128:
+			return "COMPLEX128";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:
+			return "BFLOAT16";
+		// float 8 types were introduced in onnx 1.14, see https://onnx.ai/onnx/technical/float8.html
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT8E4M3FN:
+			return "FLOAT8E4M3FN";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT8E4M3FNUZ:
+			return "FLOAT8E4M3FNUZ";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT8E5M2:
+			return "FLOAT8E5M2";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT8E5M2FNUZ:
+			return "FLOAT8E5M2FNUZ";
+		// Int4 types were introduced in ONNX 1.16. See https://onnx.ai/onnx/technical/int4.html
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT4:
+			return "UINT4";
+		case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT4:
+			return "INT4";
+		default:
+			return "UNKNOWN";
+		}
+    };
+
+    AllocatorWithDefaultOptions allocator;
+	info << model_path << ":" << endl;
+    try {
+		ModelMetadata modelMetadata = ort_session.GetModelMetadata();
+		info << "Producer Name: " << modelMetadata.GetProducerNameAllocated(allocator).get() << endl;
+        info << "Model Version: " << modelMetadata.GetVersion() << endl;
+		info << "Graph Name: " << modelMetadata.GetGraphNameAllocated(allocator).get() << endl;
+		info << "Domain: " << modelMetadata.GetDomainAllocated(allocator).get() << endl;
+		info << "Description: " << modelMetadata.GetDescriptionAllocated(allocator).get() << endl;
+		info << "Graph Description: " << modelMetadata.GetGraphDescriptionAllocated(allocator).get() << endl;
+		info << "Custom Metadata Map:" << endl;
+		std::vector<AllocatedStringPtr> keys = modelMetadata.GetCustomMetadataMapKeysAllocated(allocator);
+		for (const auto& key : keys) {
+			info << "  " << key.get() << ": " << modelMetadata.LookupCustomMetadataMapAllocated(key.get(),allocator).get() << endl;
+		}
+	} catch (const Ort::Exception& e) {
+		info << "Error getting model metadata: " << e.what() << endl;
+	}
+
+    size_t numInputNodes = ort_session.GetInputCount();
+	info << "Number of inputs: " << numInputNodes << endl;
+    for (size_t i = 0; i < numInputNodes; i++) {
+        TypeInfo inputTypeInfo = ort_session.GetInputTypeInfo(i);
+
+        ConstTensorTypeAndShapeInfo inputTensorInfo = inputTypeInfo.GetTensorTypeAndShapeInfo();
+
+		std::vector<int64_t> inputDims = inputTensorInfo.GetShape();
+        ONNXTensorElementDataType inputTensorInfoElementType = inputTensorInfo.GetElementType();
+
+		info << "Input Name: " << ort_session.GetInputNameAllocated(i, allocator).get() << endl;
+		info << "Type: " << getDataTypeName(inputTensorInfoElementType).c_str() << endl;
+		info << "Num Dimensions: " << inputDims.size() << endl;
+		for (size_t j = 0; j < inputDims.size(); j++) {
+			const char *dimSymbolic = nullptr;
+            inputTensorInfo.GetSymbolicDimensions(&dimSymbolic, j);
+			if(dimSymbolic)
+				info << "dim[" << j << "]: " << inputDims[j] << " " << dimSymbolic << endl;
+			else
+				info << "dim[" << j << "]: " << inputDims[j] << endl;
+		}
+    }
+    size_t numOutputNodes = ort_session.GetOutputCount();
+	info << "Number of outputs: " << numOutputNodes << endl;
+    for (size_t i = 0; i < numOutputNodes; i++) {
+		TypeInfo outputTypeInfo = ort_session.GetOutputTypeInfo(i);
+
+		ConstTensorTypeAndShapeInfo outputTensorInfo = outputTypeInfo.GetTensorTypeAndShapeInfo();
+
+		std::vector<int64_t> outputDims = outputTensorInfo.GetShape();
+        ONNXTensorElementDataType outputTensorInfoElementType = outputTensorInfo.GetElementType();
+		
+		info << "Output Name: " << ort_session.GetOutputNameAllocated(i, allocator).get() << endl;
+		info << "Type: " << getDataTypeName(outputTensorInfoElementType).c_str() << endl;
+		info << "Num Dimensions: " << outputDims.size() << endl;
+		for (size_t j = 0; j < outputDims.size(); j++) {
+			const char *dimSymbolic = nullptr;
+			outputTensorInfo.GetSymbolicDimensions(&dimSymbolic, j);
+			if(dimSymbolic)
+				info << "dim[" << j << "]: " << outputDims[j] << " " << dimSymbolic << endl;
+			else
+				info << "dim[" << j << "]: " << outputDims[j] << endl;
+		}
+    }
+
+	return info.str();
+}
+

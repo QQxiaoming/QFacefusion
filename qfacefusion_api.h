@@ -61,6 +61,7 @@ public:
                         uint32_t order = 0, 
                         int multipleFace = 0,
                         int genderMask = 0);
+    static std::string getModelInfo(std::string model_path);
 
 private:
     template<typename T> static void sortBoxes(std::vector<T> &boxes, uint32_t order);
