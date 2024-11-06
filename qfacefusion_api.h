@@ -285,6 +285,10 @@ public:
         QMutexLocker locker(&mutex);
         return msgList.count();
     }
+    void clearProgress(void) {
+        QMutexLocker locker(&mutex);
+        msgList.clear();
+    }
     void setMultipleFaceMode(int multipleFace) {
         m_multipleFace = multipleFace;
     }
