@@ -15,7 +15,7 @@ FaceFusion::FaceFusion(const std::string &model_path)
 	m_detect_68landmarks_net = new Face68Landmarks(m_model_path+"/2dfan4.onnx");
 	m_face_embedding_net = new FaceEmbdding(m_model_path+"/arcface_w600k_r50.onnx");
 	m_face_classifier_net = new FaceClassifier(m_model_path+"/fairface.onnx");
-	m_swap_face_net = new SwapFace(m_model_path+"/inswapper_128.onnx");
+	m_swap_face_net = new SwapFace(m_model_path+"/"+INSWAPPER_NAME);
 	m_enhance_face_net = new FaceEnhance(m_model_path+"/gfpgan_1.4.onnx");
 }
 

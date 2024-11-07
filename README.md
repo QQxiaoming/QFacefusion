@@ -127,12 +127,13 @@ DEFINES += COREML_FACEFUSION_BUILD
 
 ```
 [md5sum]
-2dfan4.onnx            b6d33e0ab221bc9249d558cf0cbe44b0
-arcface_w600k_r50.onnx 80248d427976241cbd1343889ed132b3
-fairface.onnx          77e3cbd585d748893860df0064d4fa35
-gfpgan_1.4.onnx        2f9d93ad985a8f45eb6dc32268a4576d
-inswapper_128.onnx     a3a155b90354160350efd66fed6b3d80
-yoloface_8n.onnx       bcd3728be297428848c809ae9fb4b701
+2dfan4.onnx             b6d33e0ab221bc9249d558cf0cbe44b0
+arcface_w600k_r50.onnx  80248d427976241cbd1343889ed132b3
+fairface.onnx           77e3cbd585d748893860df0064d4fa35
+gfpgan_1.4.onnx         2f9d93ad985a8f45eb6dc32268a4576d
+inswapper_128.onnx      a3a155b90354160350efd66fed6b3d80
+inswapper_128_fp16.onnx 9b5b5acbb3023cc4bf7dd831f9854434 (可选)
+yoloface_8n.onnx        bcd3728be297428848c809ae9fb4b701
 ```
 
 ## 相比[facefusion-onnxrun](https://github.com/hpc203/facefusion-onnxrun)做的修改点

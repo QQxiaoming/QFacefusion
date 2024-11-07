@@ -23,6 +23,8 @@ INCLUDEPATH += $$PWD
 
 DEFINES += USE_QT_WRAPPER
 DEFINES += MODEL_PATH=\\\"$$PWD/model\\\"
+DEFINES += INSWAPPER_NAME=\\\"inswapper_128.onnx\\\"
+# DEFINES += INSWAPPER_NAME=\\\"inswapper_128_fp16.onnx\\\"
 
 win32:!wasm {
     DEFINES += WINDOWS_FACEFUSION_BUILD
