@@ -4,6 +4,7 @@ SOURCES += \
     $$PWD/facerecognizer.cpp \
     $$PWD/faceclassifier.cpp \
     $$PWD/faceswap.cpp \
+    $$PWD/onnxbase.cpp \
     $$PWD/yolov8face.cpp \
     $$PWD/utils.cpp \
     $$PWD/qfacefusion_api.cpp
@@ -14,6 +15,7 @@ HEADERS += \
     $$PWD/facerecognizer.h \
     $$PWD/faceclassifier.h \
     $$PWD/faceswap.h \
+    $$PWD/onnxbase.h \
     $$PWD/yolov8face.h \
     $$PWD/model_matrix.bin.h \
     $$PWD/utils.h \

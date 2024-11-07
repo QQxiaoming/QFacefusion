@@ -5,12 +5,10 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <onnxruntime_cxx_api.h>
-#if defined(COREML_FACEFUSION_BUILD)
-#include <coreml_provider_factory.h>
-#endif 
-#include"utils.h"
+#include "onnxbase.h"
+#include "utils.h"
 
-class FaceClassifier
+class FaceClassifier : public OnnxBase
 {
 public:
 	enum FaceGender {
@@ -47,16 +45,5 @@ private:
     std::vector<cv::Point2f> normed_template;
 	const float FAIRFACE_MODEL_MEAN[3] = {0.485, 0.456, 0.406};
 	const float FAIRFACE_MODEL_STD[3] = {0.229, 0.224, 0.225};
-
-	Ort::Env env = Ort::Env(ORT_LOGGING_LEVEL_ERROR, "Face Classifier");
-	Ort::Session *ort_session = nullptr;
-	Ort::SessionOptions sessionOptions = Ort::SessionOptions();
-	std::vector<char*> input_names;
-	std::vector<char*> output_names;
-	std::vector<Ort::AllocatedStringPtr> input_names_ptrs;
-    std::vector<Ort::AllocatedStringPtr> output_names_ptrs;
-	std::vector<std::vector<int64_t>> input_node_dims; // >=1 outputs
-	std::vector<std::vector<int64_t>> output_node_dims; // >=1 outputs
-	Ort::MemoryInfo memory_info_handler = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
 };
 #endif
