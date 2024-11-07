@@ -285,6 +285,16 @@ public:
         QMutexLocker locker(&mutex);
         return msgList.count();
     }
+    void popOldProgress(int64_t countThres) {
+        QMutexLocker locker(&mutex);
+        if(msgList.count() <= countThres) {
+            return;
+        } else {
+            while(msgList.count() > countThres) {
+                msgList.dequeue();
+            }
+        }
+    }
     void clearProgress(void) {
         QMutexLocker locker(&mutex);
         msgList.clear();
