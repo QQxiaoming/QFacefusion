@@ -376,7 +376,9 @@ protected:
                 }
             } else if (msg.type == detect) {
                 QImage output;
+                emit swapProgress(2);
                 int ret = faswap->setDetect(msg.img, output, m_targetFaceOrder, m_genderMask);
+                emit swapProgress(100);
                 if(ret < 0) {
                     emit swapFinished(false, msg.img, msg.img, msg.args);
                 } else {
