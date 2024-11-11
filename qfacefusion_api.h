@@ -9,6 +9,7 @@
 #include "faceswap.h"
 #include "faceenhancer.h"
 #include "faceclassifier.h"
+#include "styleganexage.h"
 
 class FaceFusion {
 public:
@@ -38,6 +39,7 @@ public:
                 cv::Mat &output_img,
                 uint32_t order = 0,
                 int genderMask = 0);
+    int setAgeModify(const cv::Mat &source_img, cv::Mat &output_img, float direction);
     void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
         m_detect_face_net->setThreshold(conf_thres, iou_thresh);
 	}
@@ -68,13 +70,36 @@ private:
     FaceClassifier::FaceGender checkGender(const cv::Mat &source_img, const FaceFusionUtils::Bbox &box);
 
 private:
+    template <typename T>
+    class Lazy {
+    public:
+        Lazy(std::string path) : instance(nullptr) {
+            this->path = path;
+        }
+
+        T* getInstance(void) {
+            if (!instance) {
+                instance = std::make_unique<T>(this->path);
+            }
+            return instance.get();
+        }
+
+        T* operator->() {
+            return this->getInstance();
+        }
+
+    private:
+        std::unique_ptr<T> instance;
+        std::string path;
+    };
     std::string m_model_path;
-    Yolov8Face *m_detect_face_net = nullptr;
-	Face68Landmarks *m_detect_68landmarks_net = nullptr;
-	FaceEmbdding *m_face_embedding_net = nullptr;
-	FaceClassifier *m_face_classifier_net = nullptr;
-	SwapFace *m_swap_face_net = nullptr;
-	FaceEnhance *m_enhance_face_net = nullptr;
+    Lazy<Yolov8Face> m_detect_face_net;
+    Lazy<Face68Landmarks> m_detect_68landmarks_net;
+    Lazy<FaceEmbdding> m_face_embedding_net;
+    Lazy<FaceClassifier> m_face_classifier_net;
+    Lazy<SwapFace> m_swap_face_net;
+    Lazy<FaceEnhance> m_enhance_face_net;
+    Lazy<StyleganexAge> m_styleganexage_net;
 
     bool m_source = false;
     std::vector<std::vector<float>> m_source_face_embedding_arr;
@@ -158,6 +183,34 @@ public:
         output_img = to_qimage(output_mat);
         return ret;
     }
+    int setAgeModify(const QImage &source_img, QImage &output_img, float direction) {
+        cv::Mat source_mat = to_cvmat(source_img);
+        cv::Mat output_mat = source_mat.clone();
+        int ret = -1;
+        int number = 1;
+        float last = direction;
+        bool flag = (direction>=0.0f);
+        if(direction/2.5f >= 1.0f) {
+            number = direction/2.5f;
+            last = direction - number*2.5f;
+        } else if(direction/2.5f <= -1.0f) {
+            number = -direction/2.5f;
+            last = direction + number*2.5f;
+        }
+        for(int i = 0; i < number; i++) {
+            if(i+1 == number) {
+                ret = faswap->setAgeModify(output_mat, output_mat, last);
+            } else {
+                if(flag) {
+                    ret = faswap->setAgeModify(output_mat, output_mat, 2.5f);
+                } else {
+                    ret = faswap->setAgeModify(output_mat, output_mat, -2.5f);
+                }
+            }
+        }
+        output_img = to_qimage(output_mat);
+        return ret;
+    }
     void setFaceDetectThreshold(const float conf_thres, const float iou_thresh) {
         faswap->setFaceDetectThreshold(conf_thres, iou_thresh);
     }
@@ -216,6 +269,7 @@ public:
         target,
         detect,
         reference,
+        agemodify,
     };
     struct msg_t {
         ImgType type;
@@ -276,6 +330,14 @@ public:
         msg_t msg = { detect, img, args, conf_thres, iou_thresh };
         msgList.enqueue(msg);
         condition.wakeOne();
+    }
+    int setAgeModify(const QImage& img, float direction, const QStringList &args = QStringList(), const float conf_thres = 0.5f, const float iou_thresh = 0.4f) {
+        QMutexLocker locker(&mutex);
+        msg_t msg = { agemodify, img, args, conf_thres, iou_thresh };
+        msgList.enqueue(msg);
+        m_direction = direction;
+        condition.wakeOne();
+        return 0;
     }
     bool isBusy() {
         QMutexLocker locker(&mutex);
@@ -384,6 +446,16 @@ protected:
                 } else {
                     emit swapFinished(true, msg.img, output, msg.args);
                 }
+            } else if (msg.type == agemodify) {
+                QImage output;
+                emit swapProgress(2);
+                int ret = faswap->setAgeModify(msg.img, output, m_direction);
+                emit swapProgress(100);
+                if(ret < 0) {
+                    emit swapFinished(false, msg.img, msg.img, msg.args);
+                } else {
+                    emit swapFinished(true, msg.img, output, msg.args);
+                }
             }
         }
     exit:
@@ -402,6 +474,7 @@ private:
     uint32_t m_targetFaceOrder = 0;
     int m_genderMask = 0;
     float m_similar_thres = 0.4f;
+    float m_direction = 0.0f;
 };
 
 #endif

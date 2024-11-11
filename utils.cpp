@@ -66,6 +66,18 @@ Mat warp_face_by_face_landmark_5(const Mat temp_vision_frame, Mat &crop_img, con
     return affine_matrix;
 }
 
+vector<Point2f> scale_face_landmark_5(const vector<Point2f> face_landmark_5, const float scale)
+{
+    vector<Point2f> face_landmark_5_scale(face_landmark_5.size());
+    for (size_t i = 0; i < face_landmark_5.size(); i++)
+    {
+        face_landmark_5_scale[i] = face_landmark_5[i] - face_landmark_5[2];
+        face_landmark_5_scale[i] *= scale;
+        face_landmark_5_scale[i] += face_landmark_5[2];
+    }
+    return face_landmark_5_scale;
+}
+
 Mat create_static_box_mask(const int *crop_size, const float face_mask_blur, const int *face_mask_padding)
 {
     const float blur_amount = int(crop_size[0] * 0.5 * face_mask_blur);

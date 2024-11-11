@@ -10,22 +10,17 @@ using namespace std;
 using namespace FaceFusionUtils;
 
 FaceFusion::FaceFusion(const std::string &model_path) 
-	: m_model_path(model_path) {
-	m_detect_face_net = new Yolov8Face(m_model_path+"/yoloface_8n.onnx");
-	m_detect_68landmarks_net = new Face68Landmarks(m_model_path+"/2dfan4.onnx");
-	m_face_embedding_net = new FaceEmbdding(m_model_path+"/arcface_w600k_r50.onnx");
-	m_face_classifier_net = new FaceClassifier(m_model_path+"/fairface.onnx");
-	m_swap_face_net = new SwapFace(m_model_path+"/"+INSWAPPER_NAME);
-	m_enhance_face_net = new FaceEnhance(m_model_path+"/gfpgan_1.4.onnx");
+	: m_model_path(model_path)
+	, m_detect_face_net(m_model_path+"/yoloface_8n.onnx")
+	, m_detect_68landmarks_net(m_model_path+"/2dfan4.onnx")
+	, m_face_embedding_net(m_model_path+"/arcface_w600k_r50.onnx")
+	, m_face_classifier_net(m_model_path+"/fairface.onnx")
+	, m_swap_face_net(m_model_path+"/"+INSWAPPER_NAME)
+	, m_enhance_face_net(m_model_path+"/gfpgan_1.4.onnx")
+	, m_styleganexage_net(m_model_path+"/styleganex_age.onnx") {
 }
 
 FaceFusion::~FaceFusion() {
-	delete m_detect_face_net;
-	delete m_detect_68landmarks_net;
-	delete m_face_embedding_net;
-	delete m_face_classifier_net;
-	delete m_swap_face_net;
-	delete m_enhance_face_net;
 }
 
 template<typename T> void FaceFusion::sortBoxes(std::vector<T> &boxes, uint32_t order) {
@@ -451,6 +446,34 @@ int FaceFusion::setDetect(const cv::Mat &source_img, cv::Mat &output_img, uint32
 		}
 	}
 	output_img = temp_vision_frame;
+    return 0;
+}
+
+int FaceFusion::setAgeModify(const cv::Mat &source_img, cv::Mat &output_img, float direction) {
+	if(source_img.empty()){
+        return -1;
+    }
+	if (source_img.channels() != 3) {
+        return -1;
+    }
+	vector<Bbox> boxes;
+    m_detect_face_net->detect(source_img, boxes);
+
+	vector<Point2f> face_landmark_5of68;
+	m_detect_68landmarks_net->detect(source_img, boxes[0], face_landmark_5of68);
+	cv::Mat temp_frame = m_styleganexage_net->process(source_img, face_landmark_5of68, direction);
+	
+	vector<Bbox> temp_frame_boxes;
+	m_detect_face_net->detect(temp_frame, temp_frame_boxes);
+	if(temp_frame_boxes.empty()) {
+        return -1;
+	}
+	vector<Point2f> temp_face_landmark_5of68;
+	m_detect_68landmarks_net->detect(temp_frame, temp_frame_boxes[0], temp_face_landmark_5of68);
+	vector<float> temp_face_embedding = m_face_embedding_net->detect(temp_frame, temp_face_landmark_5of68);
+	
+	Mat swapimg = m_swap_face_net->process(source_img, temp_face_embedding, face_landmark_5of68);
+	output_img = m_enhance_face_net->process(swapimg, face_landmark_5of68);
     return 0;
 }
 
