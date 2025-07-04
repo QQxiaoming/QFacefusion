@@ -25,10 +25,14 @@ FaceFusion::~FaceFusion() {
 
 template<typename T> void FaceFusion::sortBoxes(std::vector<T> &boxes, uint32_t order) {
 	//根据order来排序
-	// order = 0: 左右排序
-	// order = 1: 右左排序
-	// order = 2: 上下排序
-	// order = 3: 下上排序
+	// order = 0: 左→右排序
+	// order = 1: 右→左排序
+	// order = 2: 上→下排序
+	// order = 3: 下→上排序
+	// order = 4: 大→小排序
+	// order = 5: 小→大排序
+	// order = 6: 好→差排序
+	// order = 7: 差→好排序
 	if(order == 0) {
 		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
 			return a.xmin < b.xmin;
@@ -44,6 +48,26 @@ template<typename T> void FaceFusion::sortBoxes(std::vector<T> &boxes, uint32_t 
 	} else if(order == 3) {
 		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
 			return a.ymin > b.ymin;
+		});
+	} else if(order == 4) {
+		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
+			float area_a = (a.xmax - a.xmin) * (a.ymax - a.ymin);
+			float area_b = (b.xmax - b.xmin) * (b.ymax - b.ymin);
+			return area_a > area_b;
+		});
+	} else if(order == 5) {
+		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
+			float area_a = (a.xmax - a.xmin) * (a.ymax - a.ymin);
+			float area_b = (b.xmax - b.xmin) * (b.ymax - b.ymin);
+			return area_a < area_b;
+		});
+	} else if(order == 6) {
+		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
+			return a.score > b.score;
+		});
+	} else if(order == 7) {
+		sort(boxes.begin(), boxes.end(), [](const T &a, const T &b) {
+			return a.score < b.score;
 		});
 	}
 }
@@ -318,6 +342,7 @@ int FaceFusion::runSwap(const cv::Mat &target_img, cv::Mat &output_img,
 		if(progress) progress(80);
 		output_img = m_enhance_face_net->process(swapimg, target_landmark_5);
 		if(progress) progress(100);
+        cv::rectangle(output_img, cv::Point(boxes[position].xmin, boxes[position].ymin), cv::Point(boxes[position].xmax, boxes[position].ymax), cv::Scalar(0, 255, 0), 2);
 	}
 	
 	return 0;

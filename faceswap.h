@@ -21,7 +21,6 @@ private:
 	int input_height;
 	int input_width;
 	const int len_feature = 512;
-    float* model_matrix;
 	std::vector<cv::Point2f> normed_template;
 	const float FACE_MASK_BLUR = 0.3;
 	const int FACE_MASK_PADDING[4] = {0, 0, 0, 0};

@@ -10,10 +10,6 @@ SwapFace::SwapFace(string model_path) : OnnxBase(model_path)
 {
     this->input_height = input_node_dims[0][2];
     this->input_width = input_node_dims[0][3];
-    
-    const int length = this->len_feature*this->len_feature;
-    this->model_matrix = new float[length];
-    memcpy(this->model_matrix,model_matrix_bin,sizeof(float)*length);
 
     ////在这里就直接定义了，没有像python程序里的那样normed_template = TEMPLATES.get(template) * crop_size
     this->normed_template.emplace_back(Point2f(46.29459968, 51.69629952));
@@ -25,8 +21,6 @@ SwapFace::SwapFace(string model_path) : OnnxBase(model_path)
 
 SwapFace::~SwapFace()
 {
-	delete[] this->model_matrix;
-	this->model_matrix = nullptr;
     this->normed_template.clear();
 }
 
@@ -63,7 +57,7 @@ void SwapFace::preprocess(Mat srcimg, const vector<Point2f> face_landmark_5, con
         float sum=0;
         for(int j=0;j<this->len_feature;j++)
         {
-            sum += (source_face_embedding[j]*this->model_matrix[j*this->len_feature+i]);
+            sum += (source_face_embedding[j]*model_matrix[j*this->len_feature+i]);
         }
         this->input_embedding[i] = sum/linalg_norm;
     }
@@ -93,15 +87,15 @@ Mat SwapFace::process(Mat target_img, const vector<float> source_face_embedding,
 	Mat rmat(out_h, out_w, CV_32FC1, pdata);
 	Mat gmat(out_h, out_w, CV_32FC1, pdata + channel_step);
 	Mat bmat(out_h, out_w, CV_32FC1, pdata + 2 * channel_step);
-	rmat *= 255.f;
-	gmat *= 255.f;
-	bmat *= 255.f;
+    rmat *= 255.f;
+    gmat *= 255.f;
+    bmat *= 255.f;
     rmat.setTo(0, rmat < 0);
-	rmat.setTo(255, rmat > 255);
-	gmat.setTo(0, gmat < 0);
-	gmat.setTo(255, gmat > 255);
-	bmat.setTo(0, bmat < 0);
-	bmat.setTo(255, bmat > 255);
+    rmat.setTo(255, rmat > 255);
+    gmat.setTo(0, gmat < 0);
+    gmat.setTo(255, gmat > 255);
+    bmat.setTo(0, bmat < 0);
+    bmat.setTo(255, bmat > 255);
 
 	vector<Mat> channel_mats(3);
 	channel_mats[0] = bmat;

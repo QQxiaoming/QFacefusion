@@ -78,7 +78,7 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
             float xmax = (pdata[i] + 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             float ymax = (pdata[num_box + i] + 0.5 * pdata[3 * num_box + i]) * this->ratio_height; ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             ////坐标的越界检查保护，可以添加一下
-            bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax});
+            bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax, 0});
             score_raw.emplace_back(score);
             /// 剩下的5个关键点坐标的计算,暂时不写,因为在下游的模块里没有用到5个关键点坐标信息
         }
@@ -91,6 +91,7 @@ void Yolov8Face::detect(Mat srcimg, std::vector<Bbox> &boxes)
     {
         const int ind = keep_inds[i];
         boxes[i] = bounding_box_raw[ind];
+        boxes[i].score = score_raw[ind];
     }
 }
 
@@ -129,7 +130,7 @@ void Yolov8Face::detect_with_kp5(Mat srcimg, std::vector<BboxWithKP5> &boxes)
             float xmax = (pdata[i] + 0.5 * pdata[2 * num_box + i]) * this->ratio_width;            ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             float ymax = (pdata[num_box + i] + 0.5 * pdata[3 * num_box + i]) * this->ratio_height; ///(cx,cy,w,h)转到(x,y,w,h)并还原到原图
             ////坐标的越界检查保护，可以添加一下
-            bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax});
+            bounding_box_raw.emplace_back(Bbox{xmin, ymin, xmax, ymax, 0});
             score_raw.emplace_back(score);
             for(int j=0;j<5;j++) {
                 float kpx = pdata[(5+3*j) * num_box + i] * this->ratio_width;

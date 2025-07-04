@@ -14,6 +14,7 @@ typedef struct
     float ymin;
     float xmax;
     float ymax;
+    float score;
 } Bbox;
 
 typedef struct
